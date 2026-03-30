@@ -1,580 +1,293 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#111111">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FermTrack</title>
   <style>
-    #fermtrack-test-banner {
-      background: #c1121f;
-      color: #ffffff;
-      text-align: center;
-      padding: 12px;
-      font-family: system-ui, -apple-system, Arial, sans-serif;
-      font-size: 1.25rem;
-      letter-spacing: 0.5px;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --panel-2: #1f2937;
-      --line: #334155;
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-      --accent: #f59e0b;
-      --good: #22c55e;
-      --warn: #f97316;
-      --danger: #ef4444;
-      --chip: #1e293b;
-    }
-    * { box-sizing: border-box; }
+
     body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: linear-gradient(180deg, #020617, #0f172a 30%);
-      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      background: #121212;
+      color: #f5f5f5;
+      line-height: 1.6;
     }
-    .wrap {
-      max-width: 1200px;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .container {
+      width: min(1100px, 92%);
       margin: 0 auto;
-      padding: 20px;
     }
+
     .hero {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: start;
+      padding: 96px 0 72px;
+      border-bottom: 1px solid #2c2c2c;
+      background: linear-gradient(180deg, #181818 0%, #121212 100%);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #d6b25e;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 4.75rem);
+      line-height: 1.05;
       margin-bottom: 20px;
+      max-width: 780px;
     }
-    .title h1 {
-      margin: 0;
+
+    .hero p {
+      font-size: 1.1rem;
+      color: #d0d0d0;
+      max-width: 720px;
+      margin-bottom: 28px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 14px 22px;
+      border-radius: 10px;
+      font-weight: bold;
+      transition: 0.2s ease;
+    }
+
+    .button.primary {
+      background: #d6b25e;
+      color: #121212;
+    }
+
+    .button.primary:hover {
+      transform: translateY(-1px);
+      background: #e3c16f;
+    }
+
+    .button.secondary {
+      border: 1px solid #444;
+      color: #f5f5f5;
+    }
+
+    .button.secondary:hover {
+      border-color: #777;
+      background: #1a1a1a;
+    }
+
+    .status-note {
+      display: inline-block;
+      background: #1c1c1c;
+      border: 1px solid #333;
+      color: #bfbfbf;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+    }
+
+    .section {
+      padding: 72px 0;
+    }
+
+    .section h2 {
       font-size: 2rem;
+      margin-bottom: 14px;
     }
-    .title p {
-      margin: 8px 0 0;
-      color: var(--muted);
+
+    .section-intro {
+      color: #c9c9c9;
+      max-width: 720px;
+      margin-bottom: 34px;
     }
-    .card {
-      background: rgba(17, 24, 39, 0.95);
-      border: 1px solid rgba(51, 65, 85, 0.9);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
-    }
+
     .grid {
       display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 18px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
     }
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    .form-grid .full { grid-column: 1 / -1; }
-    label {
-      display: block;
-      font-size: .9rem;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    input, select, textarea {
-      width: 100%;
-      background: var(--panel-2);
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      font: inherit;
-    }
-    textarea { min-height: 90px; resize: vertical; }
-    .checks {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    .check {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      background: var(--panel-2);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      color: var(--text);
-    }
-    .check input { width: auto; }
-    .row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    button {
-      background: var(--accent);
-      color: #111827;
-      border: 0;
-      border-radius: 12px;
-      padding: 12px 14px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    button.secondary {
-      background: var(--panel-2);
-      color: var(--text);
-      border: 1px solid var(--line);
-    }
-    button.danger {
-      background: var(--danger);
-      color: white;
-    }
-    .toolbar {
-      display: grid;
-      grid-template-columns: 1.5fr 1fr 1fr 1fr auto auto;
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .stat {
-      background: var(--chip);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-    }
-    .stat .n {
-      font-size: 1.5rem;
-      font-weight: 800;
-      margin-top: 4px;
-    }
-    .list {
-      display: grid;
-      gap: 12px;
-    }
-    .entry {
-      border: 1px solid var(--line);
+
+    .card {
+      background: #181818;
+      border: 1px solid #2d2d2d;
       border-radius: 16px;
-      padding: 14px;
-      background: rgba(30, 41, 59, 0.45);
+      padding: 24px;
     }
-    .entry-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: start;
+
+    .card-number {
+      color: #d6b25e;
+      font-size: 0.85rem;
+      font-weight: bold;
+      letter-spacing: 0.08em;
       margin-bottom: 10px;
     }
-    .entry h3 {
-      margin: 0;
-      font-size: 1.05rem;
+
+    .card h3 {
+      margin-bottom: 10px;
+      font-size: 1.2rem;
     }
-    .sub {
-      color: var(--muted);
-      font-size: .92rem;
-      margin-top: 4px;
+
+    .card p {
+      color: #c8c8c8;
     }
-    .chips {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin: 10px 0;
+
+    .two-column {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 28px;
+      align-items: start;
     }
-    .chip {
-      background: var(--chip);
-      border: 1px solid var(--line);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: .82rem;
-    }
-    .chip.good { border-color: rgba(34,197,94,.45); }
-    .chip.warn { border-color: rgba(249,115,22,.45); }
-    .chip.danger { border-color: rgba(239,68,68,.45); }
-    .muted { color: var(--muted); }
-    .empty {
-      text-align: center;
-      padding: 32px 16px;
-      color: var(--muted);
-      border: 1px dashed var(--line);
+
+    .list-box {
+      background: #181818;
+      border: 1px solid #2d2d2d;
       border-radius: 16px;
+      padding: 24px;
     }
-    .footer-note {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: .9rem;
+
+    ul {
+      list-style: none;
     }
-    @media (max-width: 960px) {
-      .grid { grid-template-columns: 1fr; }
-      .toolbar { grid-template-columns: 1fr 1fr; }
-      .stats { grid-template-columns: 1fr 1fr; }
+
+    li {
+      padding: 14px 0;
+      border-bottom: 1px solid #2a2a2a;
+      color: #d7d7d7;
     }
-    @media (max-width: 640px) {
-      .form-grid, .checks, .stats, .toolbar { grid-template-columns: 1fr; }
-      .hero { flex-direction: column; }
+
+    li:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .quote {
+      font-size: 1.15rem;
+      color: #ececec;
+      margin-bottom: 16px;
+    }
+
+    .muted {
+      color: #bdbdbd;
+    }
+
+    .footer {
+      padding: 28px 0 42px;
+      border-top: 1px solid #2c2c2c;
+      color: #9d9d9d;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 800px) {
+      .grid,
+      .two-column {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding-top: 72px;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="fermtrack-test-banner">
-    This is a preview version of FermTrack and is not production-ready; as such, data may not be saved or stable.
-  </div>
-  <div class="wrap">
-    <div class="hero">
-      <div class="title">
-        <h1>FermTrack</h1>
-        <p>Track dough batches, wash cycles, and what needs fortify, reball, or degas. Everything saves locally on this device.</p>
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">FermTrack</div>
+      <h1>A smarter way to track dough, fermentation, and prep workflow.</h1>
+      <p>
+        FermTrack is a kitchen system for tracking dough batches, fermentation stages,
+        and corrective actions without relying on paper logs or memory.
+      </p>
+      <div class="button-row">
+        <a class="button primary" href="https://fermtrack.com/demo" target="_blank">Open Live Demo</a>
+        <a class="button secondary" href="#features">See Features</a>
+        <a class="button secondary" href="#vision">Future Vision</a>
       </div>
-      <div class="card" style="min-width: 250px;">
-        <div class="muted">Today</div>
-        <div id="todayLabel" style="font-size:1.2rem;font-weight:800;margin-top:6px;"></div>
+      <div class="status-note">
+        Early demo build. Everything currently saves locally and may be prone to breakage while development continues.
       </div>
     </div>
+  </section>
 
-    <div class="grid">
-      <section class="card">
-        <h2 style="margin-top:0;">Add / Edit Batch</h2>
-        <form id="batchForm">
-          <div class="form-grid">
-            <div>
-              <label for="date">Date</label>
-              <input id="date" type="date" required />
-            </div>
-            <div>
-              <label for="batchId">Batch ID</label>
-              <input id="batchId" type="text" placeholder="ex. P-148" required />
-            </div>
-            <div>
-              <label for="doughType">Dough Type</label>
-              <input id="doughType" type="text" placeholder="Pretzel / Enriched / Sourdough" required />
-            </div>
-            <div>
-              <label for="kg">Weight (kg)</label>
-              <input id="kg" type="number" step="0.1" min="0" value="3.2" required />
-            </div>
-            <div>
-              <label for="mixedBy">Mixed By</label>
-              <input id="mixedBy" type="text" placeholder="John Dough" />
-            </div>
-            <div>
-              <label for="timeMixed">Time Mixed</label>
-              <input id="timeMixed" type="time" />
-            </div>
-            <div class="full">
-              <label>Actions Needed / Done</label>
-              <div class="checks">
-                <label class="check"><input id="fortify" type="checkbox" /> Fortify</label>
-                <label class="check"><input id="reball" type="checkbox" /> Reball</label>
-                <label class="check"><input id="degas" type="checkbox" /> Degas</label>
-                <label class="check"><input id="wash" type="checkbox" /> Wash</label>
-              </div>
-            </div>
-            <div class="full">
-              <label for="notes">Notes</label>
-              <textarea id="notes" placeholder="Fermentation notes, temp, behavior, condition, who handled it, etc."></textarea>
-            </div>
-          </div>
-          <div class="row" style="margin-top: 12px;">
-            <button type="submit" id="saveBtn">Save Batch</button>
-            <button type="button" class="secondary" id="resetBtn">Clear</button>
-          </div>
-        </form>
-        <div class="footer-note">Tip: use batch IDs like P-148 or MON-AM-04 so you can trace exactly what happened to every dough.</div>
-      </section>
-
-      <section class="card">
-        <div class="stats">
-          <div class="stat"><div class="muted">Total</div><div class="n" id="statTotal">0</div></div>
-          <div class="stat"><div class="muted">Fortify</div><div class="n" id="statFortify">0</div></div>
-          <div class="stat"><div class="muted">Reball</div><div class="n" id="statReball">0</div></div>
-          <div class="stat"><div class="muted">Degas</div><div class="n" id="statDegas">0</div></div>
-          <div class="stat"><div class="muted">Wash</div><div class="n" id="statWash">0</div></div>
+  <section class="section" id="features">
+    <div class="container">
+      <h2>What FermTrack is built to do</h2>
+      <p class="section-intro">
+        Built around a pretzel and laugenbrezel workflow, but designed for any fermentation-heavy kitchen that needs clarity, consistency, and traceability.
+      </p>
+      <div class="grid">
+        <div class="card">
+          <div class="card-number">01</div>
+          <h3>Track every batch</h3>
+          <p>Log batch ID, weight, time, and status so your production never disappears into guesswork.</p>
         </div>
-
-        <div class="toolbar">
-          <input id="search" type="text" placeholder="Search batch ID, dough type, notes, or mixer" />
-          <select id="dateFilter">
-            <option value="all">All dates</option>
-            <option value="today">Today</option>
-            <option value="past">Past</option>
-            <option value="future">Future</option>
-          </select>
-          <select id="taskFilter">
-            <option value="all">All tasks</option>
-            <option value="fortify">Fortify</option>
-            <option value="reball">Reball</option>
-            <option value="degas">Degas</option>
-            <option value="wash">Wash</option>
-          </select>
-          <select id="sortBy">
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="batch">Batch ID</option>
-          </select>
-          <button class="secondary" id="exportBtn">Export CSV</button>
-          <button class="danger" id="wipeBtn">Delete All</button>
+        <div class="card">
+          <div class="card-number">02</div>
+          <h3>Standardize workflow</h3>
+          <p>Document fortifying, re-balling, degassing, washing, and other key actions in one system.</p>
         </div>
-
-        <div id="list" class="list"></div>
-      </section>
+        <div class="card">
+          <div class="card-number">03</div>
+          <h3>Reduce inconsistency</h3>
+          <p>Keep fermentation steady day to day and catch problems before they become product loss.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">04</div>
+          <h3>Build for expansion</h3>
+          <p>Designed with future sensor integration in mind, including ESP32-based CO2, temperature, and humidity monitoring.</p>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <footer style="text-align:center; padding:10px; font-size:0.9rem; opacity:0.7;">
-  © 2026 FermTrack — Not yet in production
+  <section class="section">
+    <div class="container two-column">
+      <div>
+        <h2>How it fits the kitchen</h2>
+        <p class="section-intro">
+          FermTrack is not just a recipe companion. It is meant to support a more systematic kitchen by making fermentation and prep visible across the whole process.
+        </p>
+        <div class="list-box">
+          <ul>
+            <li>Create and label batches clearly</li>
+            <li>Track fermentation stages across the day</li>
+            <li>Record what needs to be fortified, re-balled, degassed, or washed</li>
+            <li>Keep production decisions visible instead of locked in someone's head</li>
+          </ul>
+        </div>
+      </div>
+      <div class="list-box" id="vision">
+        <p class="quote">
+          "Built for cooks and bakers who want consistency without turning the kitchen into paperwork."
+        </p>
+        <p class="muted">
+          Long term, FermTrack can grow beyond batch logging into environmental tracking and hardware-assisted fermentation monitoring.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      FermTrack — fermentation tracking for real kitchen workflow.
+    </div>
   </footer>
-
-  <script>
-  if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js');
-  }
-  </script>
-
-  <script>
-    const STORAGE_KEY = 'ferm_schedule_entries_v1';
-    let entries = loadEntries();
-    let editingId = null;
-
-    const $ = (id) => document.getElementById(id);
-    const form = $('batchForm');
-    const list = $('list');
-
-    $('todayLabel').textContent = new Date().toLocaleDateString(undefined, {
-      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-    });
-    $('date').valueAsDate = new Date();
-
-    function loadEntries() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-      } catch {
-        return [];
-      }
-    }
-
-    function saveEntries() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-    }
-
-    function uid() {
-      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    }
-
-    function getFormData() {
-      return {
-        id: editingId || uid(),
-        date: $('date').value,
-        batchId: $('batchId').value.trim(),
-        doughType: $('doughType').value.trim(),
-        kg: Number($('kg').value || 0),
-        mixedBy: $('mixedBy').value.trim(),
-        timeMixed: $('timeMixed').value,
-        fortify: $('fortify').checked,
-        reball: $('reball').checked,
-        degas: $('degas').checked,
-        wash: $('wash').checked,
-        notes: $('notes').value.trim(),
-        createdAt: editingId ? undefined : new Date().toISOString()
-      };
-    }
-
-    function clearForm() {
-      form.reset();
-      $('kg').value = '3.2';
-      $('date').valueAsDate = new Date();
-      editingId = null;
-      $('saveBtn').textContent = 'Save Batch';
-    }
-
-    function fillForm(entry) {
-      editingId = entry.id;
-      $('date').value = entry.date;
-      $('batchId').value = entry.batchId;
-      $('doughType').value = entry.doughType;
-      $('kg').value = entry.kg;
-      $('mixedBy').value = entry.mixedBy || '';
-      $('timeMixed').value = entry.timeMixed || '';
-      $('fortify').checked = !!entry.fortify;
-      $('reball').checked = !!entry.reball;
-      $('degas').checked = !!entry.degas;
-      $('wash').checked = !!entry.wash;
-      $('notes').value = entry.notes || '';
-      $('saveBtn').textContent = 'Update Batch';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function formatDate(dateStr) {
-      const d = new Date(dateStr + 'T00:00:00');
-      return d.toLocaleDateString();
-    }
-
-    function todayStr() {
-      const d = new Date();
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    function renderStats(filtered) {
-      $('statTotal').textContent = filtered.length;
-      $('statFortify').textContent = filtered.filter(e => e.fortify).length;
-      $('statReball').textContent = filtered.filter(e => e.reball).length;
-      $('statDegas').textContent = filtered.filter(e => e.degas).length;
-      $('statWash').textContent = filtered.filter(e => e.wash).length;
-    }
-
-    function getFilteredEntries() {
-      const q = $('search').value.trim().toLowerCase();
-      const dateFilter = $('dateFilter').value;
-      const taskFilter = $('taskFilter').value;
-      const sortBy = $('sortBy').value;
-      const today = todayStr();
-
-      let data = [...entries].filter(e => {
-        const hay = [e.batchId, e.doughType, e.notes, e.mixedBy].join(' ').toLowerCase();
-        const matchesSearch = !q || hay.includes(q);
-
-        let matchesDate = true;
-        if (dateFilter === 'today') matchesDate = e.date === today;
-        if (dateFilter === 'past') matchesDate = e.date < today;
-        if (dateFilter === 'future') matchesDate = e.date > today;
-
-        let matchesTask = true;
-        if (taskFilter !== 'all') matchesTask = !!e[taskFilter];
-
-        return matchesSearch && matchesDate && matchesTask;
-      });
-
-      data.sort((a, b) => {
-        if (sortBy === 'newest') return (b.date + (b.timeMixed || '')).localeCompare(a.date + (a.timeMixed || ''));
-        if (sortBy === 'oldest') return (a.date + (a.timeMixed || '')).localeCompare(b.date + (b.timeMixed || ''));
-        return a.batchId.localeCompare(b.batchId);
-      });
-
-      return data;
-    }
-
-    function taskChips(entry) {
-      const chips = [];
-      if (entry.fortify) chips.push('<span class="chip warn">Fortify</span>');
-      if (entry.reball) chips.push('<span class="chip warn">Reball</span>');
-      if (entry.degas) chips.push('<span class="chip warn">Degas</span>');
-      if (entry.wash) chips.push('<span class="chip good">Wash</span>');
-      if (!chips.length) chips.push('<span class="chip">No task flags</span>');
-      return chips.join('');
-    }
-
-    function render() {
-      const filtered = getFilteredEntries();
-      renderStats(filtered);
-
-      if (!filtered.length) {
-        list.innerHTML = '<div class="empty">No batches match your filters yet.</div>';
-        return;
-      }
-
-      list.innerHTML = filtered.map(entry => `
-        <article class="entry">
-          <div class="entry-head">
-            <div>
-              <h3>${escapeHtml(entry.batchId)} — ${escapeHtml(entry.doughType)}</h3>
-              <div class="sub">${formatDate(entry.date)}${entry.timeMixed ? ` • mixed ${escapeHtml(entry.timeMixed)}` : ''}${entry.mixedBy ? ` • by ${escapeHtml(entry.mixedBy)}` : ''}</div>
-            </div>
-            <div><strong>${escapeHtml(String(entry.kg))} kg</strong></div>
-          </div>
-          <div class="chips">${taskChips(entry)}</div>
-          ${entry.notes ? `<div class="muted" style="margin-bottom:12px;">${escapeHtml(entry.notes)}</div>` : ''}
-          <div class="row">
-            <button class="secondary" onclick="editEntry('${entry.id}')">Edit</button>
-            <button class="danger" onclick="deleteEntry('${entry.id}')">Delete</button>
-          </div>
-        </article>
-      `).join('');
-    }
-
-    function escapeHtml(str) {
-      return str
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-    }
-
-    window.editEntry = (id) => {
-      const entry = entries.find(e => e.id === id);
-      if (entry) fillForm(entry);
-    };
-
-    window.deleteEntry = (id) => {
-      const entry = entries.find(e => e.id === id);
-      if (!entry) return;
-      if (!confirm(`Delete batch ${entry.batchId}?`)) return;
-      entries = entries.filter(e => e.id !== id);
-      saveEntries();
-      if (editingId === id) clearForm();
-      render();
-    };
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const data = getFormData();
-      if (!data.batchId || !data.doughType || !data.date) return;
-
-      if (editingId) {
-        entries = entries.map(e => e.id === editingId ? { ...e, ...data, createdAt: e.createdAt } : e);
-      } else {
-        entries.unshift(data);
-      }
-      saveEntries();
-      clearForm();
-      render();
-    });
-
-    $('resetBtn').addEventListener('click', clearForm);
-    $('search').addEventListener('input', render);
-    $('dateFilter').addEventListener('change', render);
-    $('taskFilter').addEventListener('change', render);
-    $('sortBy').addEventListener('change', render);
-
-    $('exportBtn').addEventListener('click', () => {
-      const rows = [
-        ['date','batchId','doughType','kg','mixedBy','timeMixed','fortify','reball','degas','wash','notes']
-      ];
-      for (const e of getFilteredEntries()) {
-        rows.push([
-          e.date, e.batchId, e.doughType, e.kg, e.mixedBy || '', e.timeMixed || '',
-          e.fortify, e.reball, e.degas, e.wash, e.notes || ''
-        ]);
-      }
-      const csv = rows.map(r => r.map(value => {
-        const s = String(value ?? '');
-        return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
-      }).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `ferm-schedule-${todayStr()}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    });
-
-    $('wipeBtn').addEventListener('click', () => {
-      if (!entries.length) return;
-      if (!confirm('Delete every saved batch on this device?')) return;
-      entries = [];
-      saveEntries();
-      clearForm();
-      render();
-    });
-
-    render();
-  </script>
 </body>
 </html>
 
