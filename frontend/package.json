@@ -1,0 +1,26 @@
+{
+  "name": "fermtrack-frontend",
+  "version": "1.0.0",
+  "description": "Frontend web application for FermTrack fermentation tracking system",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 serve.py",
+    "serve": "python3 serve.py",
+    "dev": "python3 serve.py",
+    "dev-node": "npx live-server --port=8080 --cors",
+    "serve-node": "npx http-server -p 8080 --cors"
+  },
+  "keywords": [
+    "fermentation",
+    "tracking", 
+    "bakery",
+    "frontend",
+    "web-app"
+  ],
+  "author": "",
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "http-server": "^14.1.1"
+  }
+}

@@ -1,0 +1,278 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from marshmallow import Schema, fields, ValidationError
+from models import db, Batch, BatchAction, FermentationStage, User
+from datetime import datetime
+import uuid
+
+batches_bp = Blueprint('batches', __name__, url_prefix='/api/batches')
+
+class BatchCreateSchema(Schema):
+    batch_id = fields.Str(required=True, validate=lambda x: len(x) >= 1 and len(x) <= 50)
+    recipe_name = fields.Str(required=True, validate=lambda x: len(x) >= 1 and len(x) <= 100)
+    dough_weight = fields.Float(required=True, validate=lambda x: x > 0)
+    temperature = fields.Float(allow_none=True)
+    humidity = fields.Float(allow_none=True, validate=lambda x: x is None or (0 <= x <= 100))
+    notes = fields.Str(allow_none=True)
+
+class BatchUpdateSchema(Schema):
+    recipe_name = fields.Str(validate=lambda x: len(x) >= 1 and len(x) <= 100)
+    dough_weight = fields.Float(validate=lambda x: x > 0)
+    status = fields.Str(validate=lambda x: x in ['mixing', 'bulk_ferment', 'divided', 'proofing', 'ready', 'baked', 'discarded'])
+    temperature = fields.Float(allow_none=True)
+    humidity = fields.Float(allow_none=True, validate=lambda x: x is None or (0 <= x <= 100))
+    notes = fields.Str(allow_none=True)
+
+class BatchActionSchema(Schema):
+    action_type = fields.Str(required=True, validate=lambda x: x in ['fortify', 're-ball', 'degas', 'wash', 'divide', 'shape', 'other'])
+    description = fields.Str(allow_none=True)
+    weight_change = fields.Float(allow_none=True)
+    temperature_recorded = fields.Float(allow_none=True)
+    humidity_recorded = fields.Float(allow_none=True, validate=lambda x: x is None or (0 <= x <= 100))
+
+class FermentationStageSchema(Schema):
+    stage_name = fields.Str(required=True, validate=lambda x: x in ['autolyse', 'bulk_ferment', 'proof', 'final_proof', 'retard'])
+    target_duration_hours = fields.Float(validate=lambda x: x > 0)
+    temperature_target = fields.Float(allow_none=True)
+    humidity_target = fields.Float(allow_none=True, validate=lambda x: x is None or (0 <= x <= 100))
+    notes = fields.Str(allow_none=True)
+
+@batches_bp.route('', methods=['POST'])
+@jwt_required()
+def create_batch():
+    """Create a new fermentation batch"""
+    schema = BatchCreateSchema()
+    current_user_id = get_jwt_identity()
+    
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({'error': 'Validation error', 'details': err.messages}), 400
+    
+    # Check if batch_id already exists
+    existing_batch = Batch.query.filter_by(batch_id=data['batch_id']).first()
+    if existing_batch:
+        return jsonify({'error': 'Batch ID already exists'}), 409
+    
+    # Create new batch
+    batch = Batch(
+        batch_id=data['batch_id'],
+        recipe_name=data['recipe_name'],
+        dough_weight=data['dough_weight'],
+        temperature=data.get('temperature'),
+        humidity=data.get('humidity'),
+        notes=data.get('notes'),
+        created_by=current_user_id
+    )
+    
+    try:
+        db.session.add(batch)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Batch created successfully',
+            'batch': batch.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to create batch'}), 500
+
+@batches_bp.route('', methods=['GET'])
+@jwt_required()
+def list_batches():
+    """List all batches with optional filtering"""
+    status_filter = request.args.get('status')
+    limit = request.args.get('limit', type=int, default=50)
+    offset = request.args.get('offset', type=int, default=0)
+    
+    query = Batch.query
+    
+    if status_filter:
+        query = query.filter(Batch.status == status_filter)
+    
+    batches = query.order_by(Batch.created_at.desc()).offset(offset).limit(limit).all()
+    
+    return jsonify({
+        'batches': [batch.to_dict() for batch in batches],
+        'total': query.count()
+    }), 200
+
+@batches_bp.route('/<batch_id>', methods=['GET'])
+@jwt_required()
+def get_batch(batch_id):
+    """Get a specific batch by ID"""
+    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    return jsonify({'batch': batch.to_dict()}), 200
+
+@batches_bp.route('/<batch_id>', methods=['PUT'])
+@jwt_required()
+def update_batch(batch_id):
+    """Update a batch"""
+    schema = BatchUpdateSchema()
+    
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({'error': 'Validation error', 'details': err.messages}), 400
+    
+    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    # Update fields
+    for field, value in data.items():
+        setattr(batch, field, value)
+    
+    batch.updated_at = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'Batch updated successfully',
+            'batch': batch.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update batch'}), 500
+
+@batches_bp.route('/<batch_id>/actions', methods=['POST'])
+@jwt_required()
+def add_batch_action(batch_id):
+    """Add an action to a batch"""
+    schema = BatchActionSchema()
+    current_user_id = get_jwt_identity()
+    
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({'error': 'Validation error', 'details': err.messages}), 400
+    
+    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    # Create batch action
+    action = BatchAction(
+        batch_id=batch.id,
+        user_id=current_user_id,
+        action_type=data['action_type'],
+        description=data.get('description'),
+        weight_change=data.get('weight_change'),
+        temperature_recorded=data.get('temperature_recorded'),
+        humidity_recorded=data.get('humidity_recorded')
+    )
+    
+    # Update batch weight if weight change is specified
+    if data.get('weight_change'):
+        batch.dough_weight += data['weight_change']
+        batch.updated_at = datetime.utcnow()
+    
+    try:
+        db.session.add(action)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Action added successfully',
+            'action': action.to_dict(),
+            'batch': batch.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add action'}), 500
+
+@batches_bp.route('/<batch_id>/fermentation-stages', methods=['POST'])
+@jwt_required()
+def add_fermentation_stage(batch_id):
+    """Add a fermentation stage to a batch"""
+    schema = FermentationStageSchema()
+    
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({'error': 'Validation error', 'details': err.messages}), 400
+    
+    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    # Deactivate any existing active stages
+    FermentationStage.query.filter_by(batch_id=batch.id, is_active=True).update({'is_active': False})
+    
+    # Create new fermentation stage
+    stage = FermentationStage(
+        batch_id=batch.id,
+        stage_name=data['stage_name'],
+        target_duration_hours=data.get('target_duration_hours'),
+        temperature_target=data.get('temperature_target'),
+        humidity_target=data.get('humidity_target'),
+        notes=data.get('notes')
+    )
+    
+    try:
+        db.session.add(stage)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Fermentation stage added successfully',
+            'stage': stage.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to add fermentation stage'}), 500
+
+@batches_bp.route('/<batch_id>/fermentation-stages/<stage_id>/complete', methods=['PUT'])
+@jwt_required()
+def complete_fermentation_stage(batch_id, stage_id):
+    """Mark a fermentation stage as complete"""
+    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    stage = FermentationStage.query.filter_by(id=stage_id, batch_id=batch.id).first()
+    if not stage:
+        return jsonify({'error': 'Fermentation stage not found'}), 404
+    
+    stage.end_time = datetime.utcnow()
+    stage.is_active = False
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'Fermentation stage completed successfully',
+            'stage': stage.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to complete fermentation stage'}), 500
+
+@batches_bp.route('/<batch_id>', methods=['DELETE'])
+@jwt_required()
+def delete_batch(batch_id):
+    """Delete a batch (admin/manager only)"""
+    current_user_id = get_jwt_identity()
+    current_user = User.query.get(current_user_id)
+    
+    if not current_user or current_user.role not in ['admin', 'manager']:
+        return jsonify({'error': 'Insufficient permissions'}), 403
+    
+    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    if not batch:
+        return jsonify({'error': 'Batch not found'}), 404
+    
+    try:
+        db.session.delete(batch)
+        db.session.commit()
+        return jsonify({'message': 'Batch deleted successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete batch'}), 500
