@@ -60,6 +60,9 @@ Thumbs.db
 *.log
 logs/
 
+# Runtime & Process Files
+.pids/
+
 # Node.js (for any frontend tooling)
 node_modules/
 npm-debug.log*
