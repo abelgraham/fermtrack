@@ -896,8 +896,10 @@
     async function saveBatch(event) {
       event.preventDefault();
 
+      const isEdit = document.getElementById('batchId').disabled;
+      const batchId = document.getElementById('batchId').value;
+      
       const batchData = {
-        batch_id: document.getElementById('batchId').value,
         recipe_name: document.getElementById('recipeName').value,
         dough_weight: parseFloat(document.getElementById('doughWeight').value),
         status: document.getElementById('batchStatus').value,
@@ -906,8 +908,12 @@
         notes: document.getElementById('batchNotes').value || null
       };
 
-      const isEdit = document.getElementById('batchId').disabled;
-      const url = isEdit ? `${API_BASE}/batches/${batchData.batch_id}` : `${API_BASE}/batches`;
+      // Only include batch_id for POST requests (create), not PUT requests (edit)
+      if (!isEdit) {
+        batchData.batch_id = batchId;
+      }
+
+      const url = isEdit ? `${API_BASE}/batches/${batchId}` : `${API_BASE}/batches`;
       const method = isEdit ? 'PUT' : 'POST';
 
       try {

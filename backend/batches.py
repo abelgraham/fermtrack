@@ -11,6 +11,7 @@ class BatchCreateSchema(Schema):
     batch_id = fields.Str(required=True, validate=lambda x: len(x) >= 1 and len(x) <= 50)
     recipe_name = fields.Str(required=True, validate=lambda x: len(x) >= 1 and len(x) <= 100)
     dough_weight = fields.Float(required=True, validate=lambda x: x > 0)
+    status = fields.Str(missing='mixing', validate=lambda x: x in ['mixing', 'bulk_ferment', 'divided', 'proofing', 'ready', 'baked', 'discarded'])
     temperature = fields.Float(allow_none=True)
     humidity = fields.Float(allow_none=True, validate=lambda x: x is None or (0 <= x <= 100))
     notes = fields.Str(allow_none=True)
@@ -59,6 +60,7 @@ def create_batch():
         batch_id=data['batch_id'],
         recipe_name=data['recipe_name'],
         dough_weight=data['dough_weight'],
+        status=data['status'],
         temperature=data.get('temperature'),
         humidity=data.get('humidity'),
         notes=data.get('notes'),
