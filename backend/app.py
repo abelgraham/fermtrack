@@ -20,7 +20,7 @@ def create_app(config_name=None):
     jwt = JWTManager(app)
     
     # Configure CORS
-    CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'https://fermtrack.com'])
+    CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:8080', 'http://127.0.0.1:8080', 'https://fermtrack.com'])
     
     # Register blueprints
     app.register_blueprint(auth_bp)
