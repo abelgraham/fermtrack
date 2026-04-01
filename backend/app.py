@@ -1,3 +1,22 @@
+#!/usr/bin/env python3
+"""
+FermTrack - Fermentation Tracking System
+Copyright (C) 2026 FermTrack Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -19,8 +38,18 @@ def create_app(config_name=None):
     db.init_app(app)
     jwt = JWTManager(app)
     
-    # Configure CORS
-    CORS(app, origins=['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:8080', 'http://127.0.0.1:8080', 'https://fermtrack.com'])
+    # Configure CORS - Allow access from local network devices  
+    cors_origins = ['*'] if os.environ.get('FLASK_ENV', 'development') == 'development' else [
+        'http://localhost:3000', 'http://127.0.0.1:3000', 
+        'http://localhost:8080', 'http://127.0.0.1:8080',
+        'https://fermtrack.com'
+    ]
+    
+    CORS(app, 
+         origins=cors_origins,
+         supports_credentials=True,
+         allow_headers=['Content-Type', 'Authorization'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     
     # Register blueprints
     app.register_blueprint(auth_bp)
@@ -54,6 +83,12 @@ def create_app(config_name=None):
             'name': 'FermTrack API',
             'version': '1.0.0',
             'description': 'Backend API for FermTrack fermentation tracking application',
+            'license': {
+                'name': 'GNU Affero General Public License v3.0',
+                'url': 'https://www.gnu.org/licenses/agpl-3.0.html',
+                'source_code': 'https://github.com/yourusername/fermtrack',
+                'notice': 'This software is licensed under AGPL3. Source code must be made available to network users.'
+            },
             'endpoints': {
                 'authentication': '/api/auth',
                 'batches': '/api/batches',

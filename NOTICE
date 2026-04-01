@@ -1,0 +1,41 @@
+FermTrack - Fermentation Tracking System
+Copyright (C) 2026 FermTrack Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+================================================================================
+
+NETWORK COPYLEFT NOTICE (AGPL3)
+===============================
+
+This software is a network service. Under the terms of the GNU Affero General 
+Public License version 3, you must provide access to the complete source code 
+to anyone who uses this software through a computer network.
+
+Source Code Availability:
+https://github.com/yourusername/fermtrack
+
+The source code includes all files needed to build, run, and modify this 
+software, including:
+- Backend Python API server
+- Frontend web application
+- ESP32 integration firmware
+- Documentation and build scripts
+
+Third-Party Dependencies:
+All third-party dependencies used in this project are compatible with AGPL3.
+See requirements.txt and package.json for complete dependency lists.
+
+For questions about licensing or source code access, please contact:
+[Your Contact Information]

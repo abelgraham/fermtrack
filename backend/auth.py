@@ -1,3 +1,22 @@
+#!/usr/bin/env python3
+"""
+FermTrack - Fermentation Tracking System - Authentication Module
+Copyright (C) 2026 FermTrack Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+"""
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from marshmallow import Schema, fields, ValidationError
@@ -7,10 +26,25 @@ import re
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 class UserRegistrationSchema(Schema):
-    username = fields.Str(required=True, validate=lambda x: len(x) >= 3 and len(x) <= 80)
-    email = fields.Email(required=True)
-    password = fields.Str(required=True, validate=lambda x: len(x) >= 6)
-    role = fields.Str(missing='baker', validate=lambda x: x in ['baker', 'manager', 'admin'])
+    username = fields.Str(
+        required=True, 
+        validate=lambda x: len(x.strip()) >= 3 and len(x.strip()) <= 80,
+        error_messages={'validator_failed': 'Username must be between 3 and 80 characters'}
+    )
+    email = fields.Email(
+        required=True,
+        error_messages={'invalid': 'Please provide a valid email address'}
+    )
+    password = fields.Str(
+        required=True, 
+        validate=lambda x: len(x) >= 6,
+        error_messages={'validator_failed': 'Password must be at least 6 characters long'}
+    )
+    role = fields.Str(
+        missing='baker', 
+        validate=lambda x: x in ['baker', 'manager', 'admin'],
+        error_messages={'validator_failed': 'Role must be one of: baker, manager, admin'}
+    )
 
 class UserLoginSchema(Schema):
     username = fields.Str(required=True)
@@ -21,8 +55,18 @@ def register():
     """Register a new user"""
     schema = UserRegistrationSchema()
     
+    # Get and validate request data
     try:
-        data = schema.load(request.get_json())
+        request_data = request.get_json()
+        if request_data is None:
+            return jsonify({'error': 'Invalid JSON data provided'}), 400
+    except Exception as e:
+        return jsonify({'error': 'Failed to parse JSON data', 'details': str(e)}), 400
+    
+    try:
+        data = schema.load(request_data)
+        # Clean up username by trimming whitespace
+        data['username'] = data['username'].strip()
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
@@ -60,7 +104,15 @@ def register():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': 'Failed to create user'}), 500
+        error_msg = str(e)
+        
+        # Check for specific database constraint violations
+        if 'UNIQUE constraint failed: users.username' in error_msg:
+            return jsonify({'error': 'Username already exists'}), 409
+        elif 'UNIQUE constraint failed: users.email' in error_msg:
+            return jsonify({'error': 'Email already exists'}), 409
+        else:
+            return jsonify({'error': 'Failed to create user', 'details': error_msg}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():

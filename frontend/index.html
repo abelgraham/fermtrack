@@ -1,3 +1,20 @@
+<!--
+FermTrack - Fermentation Tracking System - Frontend Web Application
+Copyright (C) 2026 FermTrack Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -667,8 +684,28 @@
     let batches = [];
     let currentBatchId = null;
 
-    // API Configuration
-    const API_BASE = 'http://localhost:5000/api';
+    // API Configuration - Dynamic backend URL detection
+    const getBackendUrl = () => {
+      // Check if we have a custom backend URL in localStorage
+      const customBackend = localStorage.getItem('fermtrack_backend_url');
+      if (customBackend) {
+        return customBackend;
+      }
+      
+      // Auto-detect based on current host
+      const currentHost = window.location.hostname;
+      const protocol = window.location.protocol;
+      
+      // If accessing via localhost, use localhost for backend too
+      if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+        return 'http://localhost:5000/api';
+      }
+      
+      // For other hosts (IP addresses, domain names), use same host with port 5000
+      return `${protocol}//${currentHost}:5000/api`;
+    };
+    
+    const API_BASE = getBackendUrl();
 
     // Initialize app
     document.addEventListener('DOMContentLoaded', () => {
@@ -758,13 +795,31 @@
     }
 
     async function register() {
-      const username = document.getElementById('regUsername').value;
-      const email = document.getElementById('regEmail').value;
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
       const role = document.getElementById('regRole').value;
 
+      // Client-side validation
       if (!username || !email || !password) {
         showAlert('Please fill in all fields', 'error');
+        return;
+      }
+
+      if (username.length < 3 || username.length > 80) {
+        showAlert('Username must be between 3 and 80 characters', 'error');
+        return;
+      }
+
+      if (password.length < 6) {
+        showAlert('Password must be at least 6 characters long', 'error');
+        return;
+      }
+
+      // Simple email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showAlert('Please enter a valid email address', 'error');
         return;
       }
 
@@ -785,7 +840,13 @@
           showAlert('Registration successful!', 'success');
           showApp();
         } else {
-          showAlert(data.error || 'Registration failed', 'error');
+          let errorMessage = data.error || 'Registration failed';
+          if (data.details && typeof data.details === 'object') {
+            // Handle validation error details
+            const errorDetails = Object.values(data.details).flat().join(', ');
+            errorMessage = `${errorMessage}: ${errorDetails}`;
+          }
+          showAlert(errorMessage, 'error');
         }
       } catch (error) {
         console.error('Registration error:', error);
@@ -1230,5 +1291,23 @@
       }
     });
   </script>
+
+  <!-- AGPL3 Source Code Availability Notice -->
+  <footer style="background: #0a0a0a; border-top: 1px solid #2d2d2d; padding: 20px; margin-top: 40px; text-align: center; font-size: 0.85rem; color: #999;">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <p style="margin-bottom: 10px;">
+        <strong>FermTrack</strong> is free software licensed under the 
+        <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" style="color: #d6b25e;">GNU Affero General Public License v3.0</a>
+      </p>
+      <p style="margin-bottom: 10px;">
+        As required by AGPL3, the complete source code is available at:
+        <br><strong><a href="https://github.com/abelgraham/fermtrack" target="_blank" style="color: #d6b25e;">GitHub: fermtrack</a></strong>
+      </p>
+      <p style="margin: 0; font-size: 0.8rem;">
+        You have the right to obtain, modify, and redistribute this software. 
+        For more information, see the license link above.
+      </p>
+    </div>
+  </footer>
 </body>
 </html>

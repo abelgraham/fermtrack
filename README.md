@@ -59,6 +59,28 @@ cd backend
 python test_api.py
 ```
 
+## 📄 License
+
+FermTrack is free software licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+### What this means:
+- ✅ **Free to use** for any purpose
+- ✅ **Free to modify** and customize
+- ✅ **Free to distribute** your modifications
+- ⚠️ **Network copyleft**: If you run FermTrack as a network service, you must provide source code access to users
+
+### Source Code Availability
+As required by AGPL-3.0, the complete source code is available at:
+**https://github.com/yourusername/fermtrack**
+
+### Third-Party Components
+All dependencies are AGPL-3.0 compatible:
+- Backend: Flask, SQLAlchemy, etc. (MIT/BSD licensed)
+- Frontend: Vanilla JavaScript (no external dependencies)
+- ESP32: Arduino libraries (LGPL/MIT licensed)
+
+See `NOTICE` file for complete licensing information.
+
 ## 🐳 Docker Deployment
 
 ```bash
