@@ -72,7 +72,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
 ```
 
-**Source Code Repository:** https://github.com/yourusername/fermtrack
+**Source Code Repository:** https://github.com/abelgraham/fermtrack
 **License Text:** https://www.gnu.org/licenses/agpl-3.0.html
 
 ### ⚠️ Important Reminders

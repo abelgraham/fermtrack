@@ -86,7 +86,7 @@ def create_app(config_name=None):
             'license': {
                 'name': 'GNU Affero General Public License v3.0',
                 'url': 'https://www.gnu.org/licenses/agpl-3.0.html',
-                'source_code': 'https://github.com/yourusername/fermtrack',
+                'source_code': 'https://github.com/abelgraham/fermtrack',
                 'notice': 'This software is licensed under AGPL3. Source code must be made available to network users.'
             },
             'endpoints': {

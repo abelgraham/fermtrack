@@ -71,7 +71,7 @@ FermTrack is free software licensed under the **GNU Affero General Public Licens
 
 ### Source Code Availability
 As required by AGPL-3.0, the complete source code is available at:
-**https://github.com/yourusername/fermtrack**
+**https://github.com/abelgraham/fermtrack**
 
 ### Third-Party Components
 All dependencies are AGPL-3.0 compatible:
