@@ -35,6 +35,10 @@ ENV/
 *.db
 *.sqlite
 *.sqlite3
+instance/
+
+# Flask Instance Folder
+instance/
 
 # IDE Files
 .vscode/
@@ -48,6 +52,33 @@ ENV/
 .DS_Store?
 ._*
 .Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Node.js (for any frontend tooling)
+node_modules/
+npm-debug.log*
+package-lock.json
+yarn.lock
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Pytest cache
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
