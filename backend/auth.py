@@ -20,8 +20,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 from flask import Blueprint, request, jsonify, g
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from marshmallow import Schema, fields, ValidationError
-from models import db, User, Bakery, UserBakery
+from models import db, User, Bakery, UserBakery, UserBakeryApplication
 from middleware import require_bakery, get_current_bakery_id
+from datetime import datetime
 import re
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -46,17 +47,17 @@ class UserRegistrationSchema(Schema):
         validate=lambda x: x == 'baker',
         error_messages={'validator_failed': 'Only baker role is allowed during registration. Contact an admin to upgrade your role.'}
     )
-    bakery_slug = fields.Str(missing=None)
+    bakery_slug = fields.Str(missing=None, allow_none=True)
 
 class UserLoginSchema(Schema):
     username = fields.Str(required=True)
     password = fields.Str(required=True)
-    bakery_slug = fields.Str(required=True)
+    bakery_slug = fields.Str(missing=None, allow_none=True)  # Optional for global admins
 
 @auth_bp.route('/bakeries/available', methods=['GET'])
 def list_available_bakeries():
-    """List all active bakeries for selection (public endpoint)"""
-    bakeries = Bakery.query.filter_by(is_active=True).all()
+    """List all active and verified bakeries for selection (public endpoint)"""
+    bakeries = Bakery.query.filter_by(is_active=True, is_verified=True).all()
     return jsonify({
         'bakeries': [{
             'id': bakery.id,
@@ -108,25 +109,33 @@ def register():
         db.session.add(user)
         db.session.flush()  # Get user ID
         
-        # Associate user with specified or default bakery
-        bakery_slug = data.get('bakery_slug', 'demo')
-        bakery = Bakery.query.filter_by(slug=bakery_slug, is_active=True).first()
-        if not bakery:
-            return jsonify({'error': f'Bakery "{bakery_slug}" not found'}), 404
-            
-        user_bakery = UserBakery(
-            user_id=user.id,
-            bakery_id=bakery.id,
-            role=data['role']
-        )
-        db.session.add(user_bakery)
+        # Associate user with specified bakery (optional)
+        bakery_slug = data.get('bakery_slug')
+        
+        if bakery_slug:
+            # User selected a bakery - associate them with it
+            bakery = Bakery.query.filter_by(slug=bakery_slug, is_active=True, is_verified=True).first()
+            if not bakery:
+                return jsonify({'error': f'Bakery "{bakery_slug}" not found or not yet verified'}), 404
+                
+            user_bakery = UserBakery(
+                user_id=user.id,
+                bakery_id=bakery.id,
+                role=data['role']
+            )
+            db.session.add(user_bakery)
+        
         db.session.commit()
         
         # Create access token
         access_token = create_access_token(identity=user.id)
         
+        message = 'User registered successfully'
+        if not bakery_slug:
+            message += '. You can now apply to join verified bakeries.'
+        
         return jsonify({
-            'message': 'User registered successfully',
+            'message': message,
             'access_token': access_token,
             'user': user.to_dict(include_bakeries=True)
         }), 201
@@ -162,18 +171,29 @@ def login():
     if not user.is_active:
         return jsonify({'error': 'Account is inactive'}), 401
     
-    # Validate user has access to the specified bakery
-    bakery_slug = data['bakery_slug']
-    user_bakery = db.session.query(UserBakery).join(Bakery).filter(
-        UserBakery.user_id == user.id,
-        Bakery.slug == bakery_slug,
-        Bakery.is_active == True
-    ).first()
+    bakery_slug = data.get('bakery_slug')
     
-    if not user_bakery:
+    # Global admins can login without specifying a bakery
+    if user.is_global_admin:
+        # For global admins, bakery_slug is optional
+        pass
+    elif bakery_slug:
+        # Regular user must have access to the specified bakery
+        user_bakery = db.session.query(UserBakery).join(Bakery).filter(
+            UserBakery.user_id == user.id,
+            Bakery.slug == bakery_slug,
+            Bakery.is_active == True
+        ).first()
+        
+        if not user_bakery:
+            return jsonify({
+                'error': f'Access denied to bakery "{bakery_slug}" or bakery not found'
+            }), 403
+    else:
+        # Regular user must specify a bakery
         return jsonify({
-            'error': f'Access denied to bakery "{bakery_slug}" or bakery not found'
-        }), 403
+            'error': 'Bakery must be specified for non-admin users'
+        }), 400
     
     # Create access token
     access_token = create_access_token(identity=user.id)
@@ -392,5 +412,493 @@ def update_user_role(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to update user role', 'details': str(e)}), 500
+
+# ==================== ADMIN ENDPOINTS ====================
+
+def require_admin():
+    """Decorator to require admin role"""
+    from functools import wraps
+    
+    def decorator(f):
+        @wraps(f)
+        @jwt_required()
+        def decorated_function(*args, **kwargs):
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+            
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Check if user is a global admin first
+            if user.is_global_admin:
+                return f(*args, **kwargs)
+            
+            # Check if user has admin role in any bakery
+            admin_role = UserBakery.query.filter_by(
+                user_id=user.id,
+                role='admin',
+                is_active=True
+            ).first()
+            
+            if not admin_role:
+                return jsonify({'error': 'Admin access required'}), 403
+                
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+@auth_bp.route('/admin/users', methods=['GET'])
+@require_admin()
+def admin_get_users():
+    """Get all users for admin management"""
+    try:
+        users = User.query.all()
+        users_data = []
+        
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_active': user.is_active,
+                'created_at': user.created_at.isoformat() if user.created_at else None
+            })
+            
+        return jsonify({'users': users_data}), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch users', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/users/<user_id>', methods=['PUT'])
+@require_admin()
+def admin_update_user(user_id):
+    """Update user details"""
+    try:
+        data = request.get_json()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        if 'is_active' in data:
+            user.is_active = data['is_active']
+            
+        if 'username' in data:
+            user.username = data['username']
+            
+        if 'email' in data:
+            user.email = data['email']
+            
+        db.session.commit()
+        return jsonify({'message': 'User updated successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update user', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/users/<user_id>', methods=['DELETE'])
+@require_admin()
+def admin_delete_user(user_id):
+    """Delete a user (admin only)"""
+    try:
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        # Delete user bakery relationships first
+        UserBakery.query.filter_by(user_id=user_id).delete()
+        
+        # Delete the user
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({'message': 'User deleted successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete user', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/bakeries', methods=['GET'])
+@require_admin()
+def admin_get_bakeries():
+    """Get all bakeries for admin management"""
+    try:
+        bakeries = Bakery.query.all()
+        bakeries_data = []
+        
+        for bakery in bakeries:
+            bakeries_data.append({
+                'id': bakery.id,
+                'name': bakery.name,
+                'slug': bakery.slug,
+                'description': bakery.description,
+                'is_active': bakery.is_active,
+                'timezone': bakery.timezone,
+                'created_at': bakery.created_at.isoformat() if bakery.created_at else None
+            })
+            
+        return jsonify({'bakeries': bakeries_data}), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch bakeries', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/bakeries/<bakery_id>', methods=['PUT'])
+@require_admin()
+def admin_update_bakery(bakery_id):
+    """Update bakery details"""
+    try:
+        data = request.get_json()
+        bakery = Bakery.query.get(bakery_id)
+        
+        if not bakery:
+            return jsonify({'error': 'Bakery not found'}), 404
+            
+        if 'is_active' in data:
+            bakery.is_active = data['is_active']
+            
+        if 'name' in data:
+            bakery.name = data['name']
+            
+        if 'description' in data:
+            bakery.description = data['description']
+            
+        if 'timezone' in data:
+            bakery.timezone = data['timezone']
+            
+        db.session.commit()
+        return jsonify({'message': 'Bakery updated successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update bakery', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/bakeries/<bakery_id>', methods=['DELETE'])
+@require_admin()
+def admin_delete_bakery(bakery_id):
+    """Delete a bakery (admin only)"""
+    try:
+        bakery = Bakery.query.get(bakery_id)
+        
+        if not bakery:
+            return jsonify({'error': 'Bakery not found'}), 404
+            
+        # Delete user bakery relationships first
+        UserBakery.query.filter_by(bakery_id=bakery_id).delete()
+        
+        # Note: Batches will be cascade deleted due to foreign key constraints
+        
+        # Delete the bakery
+        db.session.delete(bakery)
+        db.session.commit()
+        
+        return jsonify({'message': 'Bakery deleted successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete bakery', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/batches', methods=['GET'])
+@require_admin()
+def admin_get_batches():
+    """Get all batches for admin management"""
+    try:
+        from models import Batch  # Import here to avoid circular imports
+        
+        bakery_id = request.args.get('bakery_id')
+        
+        if bakery_id:
+            batches = Batch.query.filter_by(bakery_id=bakery_id).all()
+        else:
+            batches = Batch.query.all()
+        
+        batches_data = []
+        
+        for batch in batches:
+            # Get bakery name
+            bakery = Bakery.query.get(batch.bakery_id)
+            
+            batches_data.append({
+                'id': batch.id,
+                'name': batch.name,
+                'status': batch.status,
+                'bakery_id': batch.bakery_id,
+                'bakery_name': bakery.name if bakery else 'Unknown',
+                'created_at': batch.created_at.isoformat() if batch.created_at else None
+            })
+            
+        return jsonify({'batches': batches_data}), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch batches', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/batches/<batch_id>', methods=['DELETE'])
+@require_admin()
+def admin_delete_batch(batch_id):
+    """Delete a batch (admin only)"""
+    try:
+        from models import Batch  # Import here to avoid circular imports
+        
+        batch = Batch.query.get(batch_id)
+        
+        if not batch:
+            return jsonify({'error': 'Batch not found'}), 404
+            
+        db.session.delete(batch)
+        db.session.commit()
+        
+        return jsonify({'message': 'Batch deleted successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete batch', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/user-roles', methods=['GET'])
+@require_admin()
+def admin_get_user_roles():
+    """Get all user-bakery relationships for admin management"""
+    try:
+        user_roles = db.session.query(
+            UserBakery.user_id,
+            UserBakery.bakery_id,
+            UserBakery.role,
+            UserBakery.is_active,
+            User.username,
+            Bakery.name.label('bakery_name')
+        ).join(User).join(Bakery).all()
+        
+        roles_data = []
+        
+        for role in user_roles:
+            roles_data.append({
+                'user_id': role.user_id,
+                'bakery_id': role.bakery_id,
+                'role': role.role,
+                'is_active': role.is_active,
+                'username': role.username,
+                'bakery_name': role.bakery_name
+            })
+            
+        return jsonify({'user_roles': roles_data}), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch user roles', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/user-roles', methods=['PUT'])
+@require_admin()
+def admin_update_user_role():
+    """Update a user's role in a bakery"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        bakery_id = data.get('bakery_id')
+        new_role = data.get('role')
+        
+        if not all([user_id, bakery_id, new_role]):
+            return jsonify({'error': 'Missing required fields'}), 400
+            
+        if new_role not in ['baker', 'manager', 'admin']:
+            return jsonify({'error': 'Invalid role'}), 400
+            
+        user_bakery = UserBakery.query.filter_by(
+            user_id=user_id,
+            bakery_id=bakery_id
+        ).first()
+        
+        if not user_bakery:
+            return jsonify({'error': 'User-bakery relationship not found'}), 404
+            
+        user_bakery.role = new_role
+        db.session.commit()
+        
+        return jsonify({'message': 'User role updated successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to update user role', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/user-roles', methods=['DELETE'])
+@require_admin()
+def admin_delete_user_role():
+    """Remove a user from a bakery"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        bakery_id = data.get('bakery_id')
+        
+        if not all([user_id, bakery_id]):
+            return jsonify({'error': 'Missing required fields'}), 400
+            
+        user_bakery = UserBakery.query.filter_by(
+            user_id=user_id,
+            bakery_id=bakery_id
+        ).first()
+        
+        if not user_bakery:
+            return jsonify({'error': 'User-bakery relationship not found'}), 404
+            
+        db.session.delete(user_bakery)
+        db.session.commit()
+        
+        return jsonify({'message': 'User removed from bakery successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to remove user from bakery', 'details': str(e)}), 500
+
+# ==================== USER APPLICATION ENDPOINTS ====================
+
+class UserApplicationSchema(Schema):
+    bakery_slug = fields.Str(required=True)
+    requested_role = fields.Str(missing='baker', validate=lambda x: x in ['baker', 'manager', 'admin'])
+    message = fields.Str(allow_none=True)
+
+@auth_bp.route('/apply', methods=['POST'])
+@jwt_required()
+def apply_to_bakery():
+    """Submit an application to join a bakery"""
+    schema = UserApplicationSchema()
+    
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({'error': 'Validation error', 'details': err.messages}), 400
+    
+    current_user = get_jwt_identity()
+    user = User.query.filter_by(username=current_user).first()
+    
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Find the bakery
+    bakery = Bakery.query.filter_by(slug=data['bakery_slug'], is_active=True).first()
+    if not bakery:
+        return jsonify({'error': 'Bakery not found'}), 404
+    
+    # Check if user is already in this bakery
+    existing_membership = UserBakery.query.filter_by(
+        user_id=user.id,
+        bakery_id=bakery.id
+    ).first()
+    
+    if existing_membership:
+        return jsonify({'error': 'You are already a member of this bakery'}), 409
+    
+    # Check if application already exists
+    existing_application = UserBakeryApplication.query.filter_by(
+        user_id=user.id,
+        bakery_id=bakery.id,
+        status='pending'
+    ).first()
+    
+    if existing_application:
+        return jsonify({'error': 'You already have a pending application for this bakery'}), 409
+    
+    # Create new application
+    application = UserBakeryApplication(
+        user_id=user.id,
+        bakery_id=bakery.id,
+        requested_role=data['requested_role'],
+        message=data.get('message')
+    )
+    
+    try:
+        db.session.add(application)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Application submitted successfully',
+            'application': application.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to submit application', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/applications', methods=['GET'])
+@require_admin()
+def admin_get_applications():
+    """Get bakery applications for admin review"""
+    try:
+        # Get current admin user's bakery contexts
+        current_user = get_jwt_identity()
+        user = User.query.filter_by(username=current_user).first()
+        
+        # Get bakeries this admin manages
+        admin_bakeries = UserBakery.query.filter_by(
+            user_id=user.id,
+            role='admin',
+            is_active=True
+        ).all()
+        
+        bakery_ids = [ub.bakery_id for ub in admin_bakeries]
+        
+        # Get applications for those bakeries
+        applications = UserBakeryApplication.query.filter(
+            UserBakeryApplication.bakery_id.in_(bakery_ids)
+        ).order_by(UserBakeryApplication.created_at.desc()).all()
+        
+        return jsonify({
+            'applications': [app.to_dict() for app in applications]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch applications', 'details': str(e)}), 500
+
+@auth_bp.route('/admin/applications/<application_id>', methods=['PUT'])
+@require_admin()
+def admin_review_application(application_id):
+    """Approve or reject a user application"""
+    try:
+        data = request.get_json()
+        status = data.get('status')  # approved, rejected
+        admin_notes = data.get('admin_notes', '')
+        
+        if status not in ['approved', 'rejected']:
+            return jsonify({'error': 'Invalid status. Must be approved or rejected'}), 400
+        
+        application = UserBakeryApplication.query.get(application_id)
+        if not application:
+            return jsonify({'error': 'Application not found'}), 404
+        
+        if application.status != 'pending':
+            return jsonify({'error': 'Application has already been reviewed'}), 400
+        
+        # Get current admin user
+        current_user = get_jwt_identity()
+        admin_user = User.query.filter_by(username=current_user).first()
+        
+        # Check admin has permission for this bakery
+        admin_access = UserBakery.query.filter_by(
+            user_id=admin_user.id,
+            bakery_id=application.bakery_id,
+            role='admin',
+            is_active=True
+        ).first()
+        
+        if not admin_access:
+            return jsonify({'error': 'You do not have admin access to this bakery'}), 403
+        
+        # Update application
+        application.status = status
+        application.admin_notes = admin_notes
+        application.reviewed_at = datetime.utcnow()
+        application.reviewed_by_id = admin_user.id
+        
+        # If approved, create UserBakery relationship
+        if status == 'approved':
+            user_bakery = UserBakery(
+                user_id=application.user_id,
+                bakery_id=application.bakery_id,
+                role=application.requested_role
+            )
+            db.session.add(user_bakery)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Application {status} successfully',
+            'application': application.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to review application', 'details': str(e)}), 500
     
     return jsonify({'bakeries': bakeries_data}), 200

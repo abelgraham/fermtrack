@@ -1,0 +1,381 @@
+// Admin Panel JavaScript Functions
+// This file contains all the admin panel functionality
+
+// Admin tab management
+function showAdminTab(tab) {
+  // Hide all sections
+  const sections = ['adminUsers', 'adminBakeries', 'adminBatches', 'adminUserRoles'];
+  sections.forEach(sectionId => {
+    const element = document.getElementById(sectionId);
+    if (element) element.classList.add('hidden');
+  });
+  
+  // Remove active class from all tabs
+  document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
+  
+  // Show selected section and mark tab as active
+  const targetSection = document.getElementById('admin' + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (targetSection) targetSection.classList.remove('hidden');
+  
+  event.target.classList.add('active');
+}
+
+// User Management Functions
+async function refreshUsers() {
+  try {
+    showLoading('adminUsers');
+    const response = await api('/api/auth/admin/users', 'GET');
+    
+    if (response.users) {
+      displayUsers(response.users);
+    }
+    hideLoading('adminUsers');
+  } catch (error) {
+    hideLoading('adminUsers');
+    console.error('Error loading users:', error);
+    showMessage('Error loading users: ' + error.message, 'error');
+  }
+}
+
+function displayUsers(users) {
+  const container = document.getElementById('users-list');
+  if (!container) return;
+  
+  if (users.length === 0) {
+    container.innerHTML = '<div class="admin-empty">No users found</div>';
+    return;
+  }
+  
+  container.innerHTML = users.map(user => `
+    <div class="admin-item">
+      <div class="admin-item-info">
+        <strong>${user.username}</strong>
+        <div class="admin-item-meta">${user.email} • ID: ${user.id}</div>
+        <div class="admin-item-meta">Active: ${user.is_active ? 'Yes' : 'No'}</div>
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-small" onclick="toggleUserStatus('${user.id}', ${!user.is_active})">
+          ${user.is_active ? 'Deactivate' : 'Activate'}
+        </button>
+        <button class="btn btn-danger btn-small" onclick="deleteUser('${user.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleUserStatus(userId, newStatus) {
+  try {
+    await api(`/api/auth/admin/users/${userId}`, 'PUT', { is_active: newStatus });
+    showMessage(`User ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
+    refreshUsers();
+  } catch (error) {
+    console.error('Error updating user:', error);
+    showMessage('Error updating user: ' + error.message, 'error');
+  }
+}
+
+async function deleteUser(userId) {
+  if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    await api(`/api/auth/admin/users/${userId}`, 'DELETE');
+    showMessage('User deleted successfully', 'success');
+    refreshUsers();
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    showMessage('Error deleting user: ' + error.message, 'error');
+  }
+}
+
+// Bakery Management Functions
+async function refreshBakeries() {
+  try {
+    showLoading('adminBakeries');
+    const response = await api('/api/auth/admin/bakeries', 'GET');
+    
+    if (response.bakeries) {
+      displayBakeries(response.bakeries);
+    }
+    hideLoading('adminBakeries');
+  } catch (error) {
+    hideLoading('adminBakeries');
+    console.error('Error loading bakeries:', error);
+    showMessage('Error loading bakeries: ' + error.message, 'error');
+  }
+}
+
+function displayBakeries(bakeries) {
+  const container = document.getElementById('bakeries-list');
+  if (!container) return;
+  
+  if (bakeries.length === 0) {
+    container.innerHTML = '<div class="admin-empty">No bakeries found</div>';
+    return;
+  }
+  
+  container.innerHTML = bakeries.map(bakery => `
+    <div class="admin-item">
+      <div class="admin-item-info">
+        <strong>${bakery.name}</strong>
+        <div class="admin-item-meta">${bakery.slug} • ID: ${bakery.id}</div>
+        <div class="admin-item-meta">Active: ${bakery.is_active ? 'Yes' : 'No'}</div>
+        ${bakery.description ? `<div class="admin-item-meta">${bakery.description}</div>` : ''}
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-small" onclick="toggleBakeryStatus('${bakery.id}', ${!bakery.is_active})">
+          ${bakery.is_active ? 'Deactivate' : 'Activate'}
+        </button>
+        <button class="btn btn-danger btn-small" onclick="deleteBakery('${bakery.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleBakeryStatus(bakeryId, newStatus) {
+  try {
+    await api(`/api/auth/admin/bakeries/${bakeryId}`, 'PUT', { is_active: newStatus });
+    showMessage(`Bakery ${newStatus ? 'activated' : 'deactivated'} successfully`, 'success');
+    refreshBakeries();
+  } catch (error) {
+    console.error('Error updating bakery:', error);
+    showMessage('Error updating bakery: ' + error.message, 'error');
+  }
+}
+
+async function deleteBakery(bakeryId) {
+  if (!confirm('Are you sure you want to delete this bakery? This will also delete all associated data and cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    await api(`/api/auth/admin/bakeries/${bakeryId}`, 'DELETE');
+    showMessage('Bakery deleted successfully', 'success');
+    refreshBakeries();
+  } catch (error) {
+    console.error('Error deleting bakery:', error);
+    showMessage('Error deleting bakery: ' + error.message, 'error');
+  }
+}
+
+// Batch Management Functions
+async function refreshBatches() {
+  try {
+    showLoading('adminBatches');
+    let url = '/api/admin/batches';
+    const response = await api(url, 'GET');
+    
+    if (response.batches) {
+      displayBatches(response.batches);
+    }
+    hideLoading('adminBatches');
+  } catch (error) {
+    hideLoading('adminBatches');
+    console.error('Error loading batches:', error);
+    showMessage('Error loading batches: ' + error.message, 'error');
+  }
+}
+
+function displayBatches(batches) {
+  const container = document.getElementById('batches-list');
+  if (!container) return;
+  
+  if (batches.length === 0) {
+    container.innerHTML = '<div class="admin-empty">No batches found</div>';
+    return;
+  }
+  
+  container.innerHTML = batches.map(batch => `
+    <div class="admin-item">
+      <div class="admin-item-info">
+        <strong>${batch.name}</strong>
+        <div class="admin-item-meta">ID: ${batch.id} • Bakery: ${batch.bakery_name || batch.bakery_id}</div>
+        <div class="admin-item-meta">Type: ${batch.type} • Status: ${batch.status}</div>
+        ${batch.description ? `<div class="admin-item-meta">${batch.description}</div>` : ''}
+      </div>
+      <div class="admin-item-actions">
+        <button class="btn btn-danger btn-small" onclick="deleteBatch('${batch.id}')">Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteBatch(batchId) {
+  if (!confirm('Are you sure you want to delete this batch? This action cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    await api(`/api/auth/admin/batches/${batchId}`, 'DELETE');
+    showMessage('Batch deleted successfully', 'success');
+    refreshBatches();
+  } catch (error) {
+    console.error('Error deleting batch:', error);
+    showMessage('Error deleting batch: ' + error.message, 'error');
+  }
+}
+
+// User Role Management Functions
+async function refreshUserRoles() {
+  try {
+    showLoading('adminUserRoles');
+    const response = await api('/api/auth/admin/user-roles', 'GET');
+    
+    if (response.user_roles) {
+      displayUserRoles(response.user_roles);
+    }
+    hideLoading('adminUserRoles');
+  } catch (error) {
+    hideLoading('adminUserRoles');
+    console.error('Error loading user roles:', error);
+    showMessage('Error loading user roles: ' + error.message, 'error');
+  }
+}
+
+function displayUserRoles(userRoles) {
+  const container = document.getElementById('user-roles-list');
+  if (!container) return;
+  
+  if (userRoles.length === 0) {
+    container.innerHTML = '<div class="admin-empty">No user roles found</div>';
+    return;
+  }
+  
+  container.innerHTML = userRoles.map(role => `
+    <div class="admin-item">
+      <div class="admin-item-info">
+        <strong>${role.username} @ ${role.bakery_name}</strong>
+        <div class="admin-item-meta">Role: ${role.role} • User ID: ${role.user_id}</div>
+        <div class="admin-item-meta">Bakery: ${role.bakery_name} (${role.bakery_id})</div>
+        <div class="admin-item-meta">Active: ${role.is_active ? 'Yes' : 'No'}</div>
+      </div>
+      <div class="admin-item-actions">
+        <select onchange="updateUserRole('${role.user_id}', '${role.bakery_id}', this.value)" style="margin-right: 5px;">
+          <option value="baker" ${role.role === 'baker' ? 'selected' : ''}>Baker</option>
+          <option value="admin" ${role.role === 'admin' ? 'selected' : ''}>Admin</option>
+        </select>
+        <button class="btn btn-danger btn-small" onclick="removeUserRole('${role.user_id}', '${role.bakery_id}')">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateUserRole(userId, bakeryId, newRole) {
+  try {
+    await api(`/api/auth/admin/user-roles`, 'PUT', {
+      user_id: userId,
+      bakery_id: bakeryId,
+      role: newRole
+    });
+    showMessage('User role updated successfully', 'success');
+    refreshUserRoles();
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    showMessage('Error updating user role: ' + error.message, 'error');
+  }
+}
+
+async function removeUserRole(userId, bakeryId) {
+  if (!confirm('Are you sure you want to remove this user role?')) {
+    return;
+  }
+  
+  try {
+    await api(`/api/auth/admin/user-roles`, 'DELETE', {
+      user_id: userId,
+      bakery_id: bakeryId
+    });
+    showMessage('User role removed successfully', 'success');
+    refreshUserRoles();
+  } catch (error) {
+    console.error('Error removing user role:', error);
+    showMessage('Error removing user role: ' + error.message, 'error');
+  }
+}
+
+// Admin authentication functions
+async function adminLogin() {
+  const username = document.getElementById('adminUsername').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  
+  if (!username || !password) {
+    showMessage('Please enter both username and password', 'error');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username,
+        password: password
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      // Store token
+      localStorage.setItem('token', data.token);
+      
+      // Verify admin role
+      const userResponse = await fetch(`${API_BASE}/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${data.token}`
+        }
+      });
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        
+        // Check if user has admin role in any bakery
+        const hasAdminRole = userData.bakeries && userData.bakeries.some(bakery => bakery.role === 'admin');
+        
+        if (hasAdminRole) {
+          // Close admin login modal and show admin panel
+          closeAdminLoginModal();
+          document.getElementById('loginForm').classList.add('hidden');
+          document.getElementById('registerForm').classList.add('hidden');
+          document.getElementById('adminPanel').classList.remove('hidden');
+          
+          // Load initial data
+          showAdminTab('users');
+          refreshUsers();
+        } else {
+          showMessage('Admin access required. You do not have admin privileges.', 'error');
+          localStorage.removeItem('token');
+        }
+      } else {
+        showMessage('Failed to verify admin privileges', 'error');
+        localStorage.removeItem('token');
+      }
+    } else {
+      showMessage(data.error || 'Invalid credentials', 'error');
+    }
+  } catch (error) {
+    console.error('Error during admin login:', error);
+    showMessage('Login failed: ' + error.message, 'error');
+  }
+}
+
+// Admin logout
+function adminLogout() {
+  localStorage.removeItem('token');
+  document.getElementById('adminPanel').classList.add('hidden');
+  document.getElementById('loginForm').classList.remove('hidden');
+  showMessage('Logged out successfully', 'success');
+}
+
+// Initialize admin panel when loaded
+function initializeAdminPanel() {
+  // Load users by default when admin panel is shown
+  if (!document.getElementById('adminPanel').classList.contains('hidden')) {
+    showAdminTab('users');
+  }
+}
+// Make adminLogin function available globally for HTML onclick handler
+window.adminLogin = adminLogin;

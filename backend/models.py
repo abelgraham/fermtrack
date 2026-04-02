@@ -34,10 +34,10 @@ class Bakery(db.Model):
     description = db.Column(db.Text)
     timezone = db.Column(db.String(50), default='UTC')
     is_active = db.Column(db.Boolean, default=True)
-    # Verification fields temporarily removed - will be added back with proper migration
-    # is_verified = db.Column(db.Boolean, default=False)
-    # verification_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
-    # verification_notes = db.Column(db.Text)
+    # Verification fields for admin approval workflow
+    is_verified = db.Column(db.Boolean, default=False)
+    verification_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    verification_notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -54,11 +54,61 @@ class Bakery(db.Model):
             'description': self.description,
             'timezone': self.timezone,
             'is_active': self.is_active,
-            # Verification fields temporarily removed - will be added back with proper migration
-            # 'is_verified': self.is_verified,
-            # 'verification_status': self.verification_status, 
-            # 'verification_notes': self.verification_notes,
+            'is_verified': self.is_verified,
+            'verification_status': self.verification_status, 
+            'verification_notes': self.verification_notes,
             'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class UserBakeryApplication(db.Model):
+    """Model for users applying to join bakeries"""
+    __tablename__ = 'user_bakery_applications'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    bakery_id = db.Column(db.String(36), db.ForeignKey('bakeries.id'), nullable=False)
+    requested_role = db.Column(db.String(20), nullable=False, default='baker')  # baker, manager, admin
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    message = db.Column(db.Text)  # User's message explaining why they want to join
+    admin_notes = db.Column(db.Text)  # Admin notes for approval/rejection
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime)
+    reviewed_by_id = db.Column(db.String(36), db.ForeignKey('users.id'))
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='bakery_applications')
+    bakery = db.relationship('Bakery', backref='user_applications')
+    reviewed_by = db.relationship('User', foreign_keys=[reviewed_by_id])
+    
+    # Unique constraint to prevent duplicate applications
+    __table_args__ = (db.UniqueConstraint('user_id', 'bakery_id', name='uq_user_bakery_application'),)
+    
+    def to_dict(self):
+        """Convert application to dictionary"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'user': {
+                'id': self.user.id,
+                'username': self.user.username,
+                'email': self.user.email
+            } if self.user else None,
+            'bakery_id': self.bakery_id,
+            'bakery': {
+                'id': self.bakery.id,
+                'name': self.bakery.name,
+                'slug': self.bakery.slug
+            } if self.bakery else None,
+            'requested_role': self.requested_role,
+            'status': self.status,
+            'message': self.message,
+            'admin_notes': self.admin_notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
+            'reviewed_by': {
+                'id': self.reviewed_by.id,
+                'username': self.reviewed_by.username
+            } if self.reviewed_by else None
         }
 
 class UserBakery(db.Model):
@@ -100,6 +150,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    is_global_admin = db.Column(db.Boolean, default=False)  # Global admin can access all bakeries
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -127,6 +178,9 @@ class User(db.Model):
     
     def has_access_to_bakery(self, bakery_id):
         """Check if user has access to a specific bakery"""
+        # Global admins have access to all bakeries
+        if self.is_global_admin:
+            return True
         return any(ub.bakery_id == bakery_id and ub.is_active 
                   for ub in self.user_bakeries)
     
@@ -137,6 +191,7 @@ class User(db.Model):
             'username': self.username,
             'email': self.email,
             'is_active': self.is_active,
+            'is_global_admin': self.is_global_admin,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         

@@ -21,6 +21,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FermTrack App</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     * {
       box-sizing: border-box;
@@ -280,6 +281,30 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       color: #fff;
     }
 
+    .admin-modal .modal-content {
+      max-width: 450px;
+      padding: 40px;
+    }
+
+    .admin-modal .modal-header {
+      text-align: center;
+      border-bottom: none;
+      padding-bottom: 5px;
+      margin-bottom: 25px;
+    }
+
+    .admin-modal .modal-header h3 {
+      color: #d6b25e;
+      font-size: 1.8rem;
+      margin: 0;
+    }
+
+    .admin-modal .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 25px;
+    }
+
     .tabs {
       display: flex;
       border-bottom: 1px solid #2d2d2d;
@@ -441,6 +466,181 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         flex-direction: column;
       }
     }
+
+    /* Admin Panel Styles */
+    .admin-panel {
+      background: #181818;
+      border: 2px solid #d6b25e;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 20px;
+    }
+
+    .admin-tabs {
+      display: flex;
+      border-bottom: 1px solid #2d2d2d;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .admin-tab {
+      background: none;
+      border: none;
+      padding: 12px 20px;
+      color: #bbb;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .admin-tab:hover {
+      color: #d6b25e;
+    }
+
+    .admin-tab.active {
+      color: #d6b25e;
+      border-bottom-color: #d6b25e;
+    }
+
+    .admin-section {
+      min-height: 300px;
+    }
+
+    .admin-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .admin-table-container {
+      background: #0f0f0f;
+      border-radius: 8px;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .admin-table th {
+      background: #2d2d2d;
+      color: #d6b25e;
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .admin-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #2d2d2d;
+      color: #f5f5f5;
+      vertical-align: middle;
+    }
+
+    .admin-table tr:hover {
+      background: rgba(214, 178, 94, 0.1);
+    }
+
+    .admin-table .loading {
+      text-align: center;
+      padding: 40px;
+      color: #bbb;
+      font-style: italic;
+    }
+
+    .admin-actions-cell {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .admin-actions-cell .btn {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      min-width: auto;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .status-active { background: #059669; color: #fff; }
+    .status-inactive { background: #6b7280; color: #fff; }
+
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .status-success {
+      background: #28a745;
+      color: white;
+    }
+
+    .status-warning {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    .status-danger {
+      background: #dc3545;
+      color: white;
+    }
+
+    .admin-empty {
+      text-align: center;
+      color: #999;
+      font-style: italic;
+      padding: 20px;
+    }
+
+    .text-muted {
+      color: #6c757d !important;
+      font-size: 0.8rem;
+    }
+
+    .admin-form {
+      background: #1a1a1a;
+      border: 1px solid #2d2d2d;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 15px;
+    }
+
+    .admin-form h4 {
+      margin-bottom: 15px;
+      color: #d6b25e;
+    }
+
+    .admin-form .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .id-cell {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: #888;
+    }
+
   </style>
 </head>
 <body>
@@ -469,6 +669,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         <div class="auth-toggle">
           Don't have an account? <a href="#" onclick="showRegister()">Register here</a>
         </div>
+        <div class="auth-toggle" style="border-top: 1px solid #2d2d2d; padding-top: 15px; margin-top: 15px;">
+          <a href="#" onclick="showAdminLogin()" style="color: #dc2626; font-weight: 500;">
+            <i class="fas fa-shield-alt"></i> Admin Access
+          </a>
+        </div>
       </div>
 
       <div id="registerForm" class="hidden">
@@ -486,14 +691,316 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           <input type="password" id="regPassword" class="form-control" placeholder="Choose password">
         </div>
         <div class="form-group">
-          <label for="regBakery">Select Bakery</label>
-          <select id="regBakery" class="form-control" required>
-            <option value="">Choose a bakery...</option>
+          <label for="regBakery">Join a Bakery (Optional)</label>
+          <select id="regBakery" class="form-control">
+            <option value="">Register independently - Apply later</option>
           </select>
+          <small style="color: #999; font-size: 0.85rem; margin-top: 5px; display: block;">
+            You can register without joining a bakery and apply to verified bakeries later.
+          </small>
         </div>
         <button onclick="register()" class="btn btn-primary" style="width: 100%; margin-bottom: 15px;">Register</button>
+        
+        <div style="text-align: center; margin-bottom: 15px;">
+          <a href="#" onclick="showBakeryApplication()" style="color: #d6b25e; font-size: 0.9rem; text-decoration: none;">
+            <i class="fas fa-building"></i> Apply to Join a Bakery
+          </a>
+        </div>
+        
         <div class="auth-toggle">
           Already have an account? <a href="#" onclick="showLogin()">Login here</a>
+        </div>
+      </div>
+
+      <!-- Bakery Application Form -->
+      <div id="bakeryApplicationForm" class="hidden">
+        <h3 style="margin-bottom: 20px;">Apply to Join a Bakery</h3>
+        <div class="form-group">
+          <label for="appBakery">Select Bakery</label>
+          <select id="appBakery" class="form-control" required>
+            <option value="">Choose a verified bakery...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="appRole">Requested Role</label>
+          <select id="appRole" class="form-control" required>
+            <option value="baker">Baker</option>
+            <option value="manager">Manager</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="appMessage">Message (Optional)</label>
+          <textarea id="appMessage" class="form-control" rows="3" 
+            placeholder="Tell the bakery administrators why you'd like to join..."></textarea>
+        </div>
+        <button onclick="submitBakeryApplication()" class="btn btn-primary" style="width: 100%; margin-bottom: 15px;">
+          Submit Application
+        </button>
+        <div style="text-align: center;">
+          <a href="#" onclick="showLogin()" style="color: #999; font-size: 0.9rem; text-decoration: none;">
+            <i class="fas fa-arrow-left"></i> Back to Login
+          </a>
+        </div>
+      </div>
+
+      <!-- Admin Login Modal -->
+      <div id="adminLoginModal" class="modal admin-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3><i class="fas fa-shield-alt"></i> Admin Access</h3>
+            <button type="button" class="modal-close" onclick="closeAdminLoginModal()">&times;</button>
+          </div>
+          
+          <div class="form-group">
+            <label for="adminUsername">Admin Username</label>
+            <input type="text" id="adminUsername" class="form-control" placeholder="Enter admin username" required onkeypress="handleAdminKeyPress(event)">
+          </div>
+          
+          <div class="form-group">
+            <label for="adminPassword">Admin Password</label>
+            <input type="password" id="adminPassword" class="form-control" placeholder="Enter admin password" required onkeypress="handleAdminKeyPress(event)">
+          </div>
+          
+          <button onclick="adminLogin()" class="btn btn-primary" style="width: 100%; margin-bottom: 15px;">
+            <i class="fas fa-sign-in-alt"></i> Admin Login
+          </button>
+        </div>
+      </div>
+
+      <!-- Add User Modal -->
+      <div id="addUserModal" class="modal admin-modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3><i class="fas fa-user-plus"></i> Add New User</h3>
+            <button type="button" class="modal-close" onclick="hideAddUser()">&times;</button>
+          </div>
+          
+          <form id="addUserForm">
+            <div class="form-group">
+              <label for="newUsername">Username</label>
+              <input type="text" id="newUsername" name="username" class="form-control" placeholder="Enter username" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="newUserEmail">Email</label>
+              <input type="email" id="newUserEmail" name="email" class="form-control" placeholder="Enter email" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="newUserPassword">Password</label>
+              <input type="password" id="newUserPassword" name="password" class="form-control" placeholder="Enter password" required>
+            </div>
+            
+            <div class="form-group">
+              <label>
+                <input type="checkbox" name="is_active" checked> 
+                <span style="margin-left: 5px;">Active User</span>
+              </label>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+              <button type="button" onclick="hideAddUser()" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+              </button>
+              <button type="button" onclick="addUser()" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add User
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Admin Panel -->
+      <div id="adminPanel" class="hidden admin-panel">
+        <h3 style="margin-bottom: 20px; color: #d6b25e; text-align: center;">
+          <i class="fas fa-shield-alt"></i> Admin Database Panel
+        </h3>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+          <a href="#" onclick="showLogin()" style="color: #999; font-size: 0.9rem; text-decoration: none;">
+            <i class="fas fa-arrow-left"></i> Back to Login
+          </a>
+        </div>
+        
+        <div class="admin-tabs">
+          <button class="admin-tab active" onclick="showAdminTab('users')">Users</button>
+          <button class="admin-tab" onclick="showAdminTab('bakeries')">Bakeries</button>
+          <button class="admin-tab" onclick="showAdminTab('batches')">Batches</button>
+          <button class="admin-tab" onclick="showAdminTab('roles')">User Roles</button>
+          <button class="admin-tab" onclick="showAdminTab('applications')">Applications</button>
+          <button class="admin-tab" onclick="showAdminTab('verification')">Bakery Verification</button>
+        </div>
+
+        <!-- Users Management -->
+        <div id="adminUsers" class="admin-section">
+          <div class="admin-actions">
+            <button class="btn btn-primary btn-small" onclick="refreshUsers()">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+            <button class="btn btn-success btn-small" onclick="showAddUser()">
+              <i class="fas fa-plus"></i> Add User
+            </button>
+          </div>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Active</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr><td colspan="6" class="loading">Loading users...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Bakeries Management -->
+        <div id="adminBakeries" class="admin-section hidden">
+          <div class="admin-actions">
+            <button class="btn btn-primary btn-small" onclick="refreshBakeries()">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+            <button class="btn btn-success btn-small" onclick="showAddBakery()">
+              <i class="fas fa-plus"></i> Add Bakery
+            </button>
+          </div>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Slug</th>
+                  <th>Active</th>
+                  <th>Description</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bakeriesTableBody">
+                <tr><td colspan="6" class="loading">Loading bakeries...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Batches Management -->
+        <div id="adminBatches" class="admin-section hidden">
+          <div class="admin-actions">
+            <button class="btn btn-primary btn-small" onclick="refreshBatches()">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+            <select id="adminBakeryFilter" class="form-control" style="width: auto; display: inline-block; margin-left: 10px;" onchange="refreshBatches()">
+              <option value="">All Bakeries</option>
+            </select>
+          </div>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Bakery</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="batchesTableBody">
+                <tr><td colspan="6" class="loading">Loading batches...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- User Roles Management -->
+        <div id="adminRoles" class="admin-section hidden">
+          <div class="admin-actions">
+            <button class="btn btn-primary btn-small" onclick="refreshUserRoles()">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+          </div>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Bakery</th>
+                  <th>Role</th>
+                  <th>Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rolesTableBody">
+                <tr><td colspan="5" class="loading">Loading user roles...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- User Applications Management -->
+        <div id="adminApplications" class="admin-section hidden">
+          <div class="admin-actions">
+            <button class="btn btn-primary btn-small" onclick="refreshApplications()">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+            <select id="applicationStatusFilter" class="form-control" style="width: auto; display: inline-block; margin-left: 10px;" onchange="refreshApplications()">
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Bakery</th>
+                  <th>Role Requested</th>
+                  <th>Status</th>
+                  <th>Applied</th>
+                  <th>Message</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="applicationsTableBody">
+                <tr><td colspan="7" class="loading">Loading applications...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Bakery Verification Management -->
+        <div id="adminVerification" class="admin-section hidden">
+          <div class="admin-actions">
+            <button class="btn btn-primary btn-small" onclick="refreshVerifications()">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+          </div>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Bakery Name</th>
+                  <th>Slug</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Description</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="verificationsTableBody">
+                <tr><td colspan="6" class="loading">Loading pending verifications...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -687,6 +1194,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   <!-- Alerts Container -->
   <div id="alertsContainer" style="position: fixed; top: 20px; right: 20px; z-index: 2000; max-width: 400px;"></div>
 
+  <!-- Admin JavaScript -->
+  <script src="admin.js"></script>
+
   <script>
     // Global state
     let currentUser = null;
@@ -719,6 +1229,45 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     };
     
     const API_BASE = getBackendUrl();
+
+    // Display message function for admin notifications
+    function showMessage(message, type = 'info') {
+      // Create message element
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = message;
+      messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 6px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        max-width: 400px;
+        word-wrap: break-word;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      
+      // Set background color based on type
+      const colors = {
+        'success': '#10b981',
+        'error': '#dc2626',
+        'warning': '#f59e0b',
+        'info': '#3b82f6'
+      };
+      messageDiv.style.backgroundColor = colors[type] || colors.info;
+      
+      // Add to page
+      document.body.appendChild(messageDiv);
+      
+      // Auto-remove after 4 seconds
+      setTimeout(() => {
+        if (messageDiv.parentNode) {
+          messageDiv.parentNode.removeChild(messageDiv);
+        }
+      }, 4000);
+    }
 
     // Helper function to get headers with bakery context
     const getAuthHeaders = (includeBakery = true) => {
@@ -887,6 +1436,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('appScreen').classList.remove('hidden');
       console.log('Showing app, current bakery:', currentBakery);
+      
+      // Check admin access and show admin panel if user is admin
+      checkAdminAccess();
+      
       // Ensure we have bakery context before loading batches
       if (currentBakery) {
         loadBatches();
@@ -900,11 +1453,73 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     function showLogin() {
       document.getElementById('loginForm').classList.remove('hidden');
       document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('bakeryApplicationForm').classList.add('hidden');
+      document.getElementById('adminPanel').classList.add('hidden');
     }
 
     function showRegister() {
       document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('bakeryApplicationForm').classList.add('hidden');
+      document.getElementById('adminPanel').classList.add('hidden');
       document.getElementById('registerForm').classList.remove('hidden');
+    }
+
+    function showBakeryApplication() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('bakeryApplicationForm').classList.remove('hidden');
+      document.getElementById('adminPanel').classList.add('hidden');
+      
+      // Load bakeries for application
+      loadBakeriesForApplication();
+    }
+
+    function showAdminLogin() {
+      // Show admin login modal
+      document.getElementById('adminLoginModal').style.display = 'block';
+      // Clear previous input values
+      document.getElementById('adminUsername').value = '';
+      document.getElementById('adminPassword').value = '';
+      // Focus on username field
+      setTimeout(() => {
+        document.getElementById('adminUsername').focus();
+      }, 100);
+    }
+
+    function closeAdminLoginModal() {
+      // Hide admin login modal
+      document.getElementById('adminLoginModal').style.display = 'none';
+      // Clear input values for security
+      document.getElementById('adminUsername').value = '';
+      document.getElementById('adminPassword').value = '';
+    }
+
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+      const adminModal = document.getElementById('adminLoginModal');
+      if (event.target === adminModal) {
+        closeAdminLoginModal();
+      }
+      
+      const batchModal = document.getElementById('batchModal');
+      if (event.target === batchModal) {
+        closeBatchModal();
+      }
+      
+      const detailsModal = document.getElementById('batchDetailsModal');
+      if (event.target === detailsModal) {
+        closeBatchDetailsModal();
+      }
+    }
+
+    // Handle Enter key press in admin login inputs
+    function handleAdminKeyPress(event) {
+
+    // Make admin functions globally available
+      if (event.key === 'Enter') {
+        adminLogin();
+      }
     }
 
     async function validateToken() {
@@ -988,8 +1603,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       const bakerySlug = document.getElementById('regBakery').value;
 
       // Client-side validation
-      if (!username || !email || !password || !bakerySlug) {
-        showAlert('Please fill in all fields', 'error');
+      if (!username || !email || !password) {
+        showAlert('Please fill in username, email, and password', 'error');
         return;
       }
 
@@ -1011,10 +1626,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       }
 
       try {
+        const requestBody = { username, email, password, role };
+        
+        // Only include bakery_slug if one was selected
+        if (bakerySlug) {
+          requestBody.bakery_slug = bakerySlug;
+        }
+
         const response = await fetch(`${API_BASE}/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password, role, bakery_slug: bakerySlug })
+          body: JSON.stringify(requestBody)
         });
 
         const data = await response.json();
@@ -1024,14 +1646,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           localStorage.setItem('fermtrack_token', authToken);
           currentUser = data.user;
           
-          // Set bakery context after successful registration
-          currentBakery = bakerySlug;
-          localStorage.setItem('fermtrack_current_bakery', currentBakery);
-          
-          updateUserDisplay();
-          updateBakerySelectors();
-          showAlert('Registration successful!', 'success');
-          showApp();
+          if (bakerySlug) {
+            // User registered with a bakery - proceed to app
+            currentBakery = bakerySlug;
+            localStorage.setItem('fermtrack_current_bakery', currentBakery);
+            
+            updateUserDisplay();
+            updateBakerySelectors();
+            showAlert('Registration successful!', 'success');
+            showApp();
+          } else {
+            // User registered without bakery - show application form
+            showAlert(data.message || 'Registration successful! You can now apply to join bakeries.', 'success');
+            showBakeryApplication();
+          }
         } else {
           let errorMessage = data.error || 'Registration failed';
           if (data.details && typeof data.details === 'object') {
@@ -1060,7 +1688,86 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       showAlert('Logged out successfully', 'success');
     }
 
-    // Batch management functions
+    // ==================== BAKERY APPLICATION FUNCTIONS ====================
+
+    async function loadBakeriesForApplication() {
+      try {
+        const response = await fetch(`${API_BASE}/auth/bakeries/available`);
+        const data = await response.json();
+        
+        const select = document.getElementById('appBakery');
+        select.innerHTML = '<option value="">Choose a verified bakery...</option>';
+        
+        if (data.bakeries && data.bakeries.length > 0) {
+          data.bakeries.forEach(bakery => {
+            const option = document.createElement('option');
+            option.value = bakery.slug;
+            option.textContent = `${bakery.name} (${bakery.slug})`;
+            select.appendChild(option);
+          });
+        } else {
+          select.innerHTML = '<option value="">No verified bakeries available</option>';
+        }
+      } catch (error) {
+        console.error('Error loading bakeries:', error);
+      }
+    }
+
+    async function submitBakeryApplication() {
+      const bakerySlug = document.getElementById('appBakery').value;
+      const requestedRole = document.getElementById('appRole').value;
+      const message = document.getElementById('appMessage').value.trim();
+
+      if (!bakerySlug) {
+        showAlert('Please select a bakery to apply to', 'error');
+        return;
+      }
+
+      if (!requestedRole) {
+        showAlert('Please select a role', 'error');
+        return;
+      }
+
+      const token = localStorage.getItem('fermtrack_token');
+      if (!token) {
+        showAlert('Please login first to submit an application', 'error');
+        showLogin();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/auth/apply`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            bakery_slug: bakerySlug,
+            requested_role: requestedRole,
+            message: message || null
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showAlert('Application submitted successfully! You will be notified when it is reviewed.', 'success');
+          // Clear form
+          document.getElementById('appBakery').value = '';
+          document.getElementById('appRole').value = 'baker';
+          document.getElementById('appMessage').value = '';
+          showLogin();
+        } else {
+          showAlert(data.error || 'Failed to submit application', 'error');
+        }
+      } catch (error) {
+        console.error('Error submitting application:', error);
+        showAlert('Connection error. Please try again.', 'error');
+      }
+    }
+
+    // ==================== BATCH MANAGEMENT FUNCTIONS ====================
     async function loadBatches() {
       console.log('=== loadBatches called ===');
       console.log('currentBakery:', currentBakery);
@@ -1553,6 +2260,87 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         showCreateBatch();
       }
     });
+
+    // ==================== ADMIN PANEL FUNCTIONS ====================
+
+    // Check if current user is admin and show/hide admin panel
+    function checkAdminAccess() {
+      const userRole = getCurrentUserRole();
+      const adminPanel = document.getElementById('adminPanel');
+      
+      if (userRole === 'admin') {
+        adminPanel.classList.remove('hidden');
+        // Admin data will be loaded on-demand when admin tabs are clicked
+      } else {
+        adminPanel.classList.add('hidden');
+      }
+    }
+
+    // ==================== ADMIN FUNCTIONS MOVED TO admin.js ====================
+
+    // ==================== UTILITY FUNCTIONS ====================
+
+    // Helper function for admin API calls (used by admin.js)
+    async function api(endpoint, method = 'GET', body = null) {
+      const url = endpoint.startsWith('/api') ? API_BASE + endpoint.substring(4) : API_BASE + endpoint;
+      const options = {
+        method,
+        headers: getAuthHeaders(false) // Admin endpoints don't need bakery context
+      };
+      
+      if (body && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      }
+      
+      try {
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+          let errorMessage = 'API request failed';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch (e) {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error(`API call failed: ${method} ${endpoint}`, error);
+        throw error;
+      }
+    }
+
+    // Loading state helpers for admin.js
+    function showLoading(containerId) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'admin-loading';
+        loadingDiv.textContent = 'Loading...';
+        loadingDiv.style.cssText = 'text-align: center; padding: 20px; color: #999;';
+        container.innerHTML = '';
+        container.appendChild(loadingDiv);
+      }
+    }
+
+    function hideLoading(containerId) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        const loadingDiv = container.querySelector('.admin-loading');
+        if (loadingDiv) {
+          loadingDiv.remove();
+        }
+      }
+    }
+
+    // Make admin functions globally available for HTML onclick handlers
+    window.showAdminLogin = showAdminLogin;
+    window.closeAdminLoginModal = closeAdminLoginModal;
+    window.handleAdminKeyPress = handleAdminKeyPress;
   </script>
 
   <!-- AGPL3 Source Code Availability Notice -->
@@ -1564,7 +2352,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       </p>
       <p style="margin-bottom: 10px;">
         As required by AGPL3, the complete source code is available at:
-        <br><strong><a href="https://github.com/abelgraham/fermtrack" target="_blank" style="color: #d6b25e;">GitHub: abelgraham/fermtrack</a></strong>
+        <br><strong><a href="https://github.com/abelgradam/fermtrack" target="_blank" style="color: #d6b25e;">GitHub: abelgraham/fermtrack</a></strong>
       </p>
       <p style="margin: 0; font-size: 0.8rem;">
         You have the right to obtain, modify, and redistribute this software. 

@@ -23,8 +23,39 @@ from marshmallow import Schema, fields, ValidationError
 from models import db, Bakery, User, UserBakery
 from middleware import get_current_bakery, require_bakery
 import re
+from functools import wraps
 
 bakeries_bp = Blueprint('bakeries', __name__, url_prefix='/api/bakeries')
+
+def require_admin():
+    """Decorator to require admin role for super admin functionality"""
+    def decorator(f):
+        @wraps(f)
+        @jwt_required()
+        def decorated_function(*args, **kwargs):
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+            
+            if not user:
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Check if user is a global admin first
+            if user.is_global_admin:
+                return f(*args, **kwargs)
+            
+            # Check if user has admin role in any bakery
+            admin_role = UserBakery.query.filter_by(
+                user_id=user.id,
+                role='admin',
+                is_active=True
+            ).first()
+            
+            if not admin_role:
+                return jsonify({'error': 'Admin access required for bakery management'}), 403
+                
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 class BakeryRegistrationSchema(Schema):
     slug = fields.Str(
@@ -273,12 +304,9 @@ class BakeryVerificationSchema(Schema):
     verification_notes = fields.Str(allow_none=True)
 
 @bakeries_bp.route('/verification/pending', methods=['GET'])
-@jwt_required()
+@require_admin()
 def list_pending_verifications():
-    """List bakeries pending verification (super admin only)"""
-    # TODO: Add super admin check here
-    # For now, allowing any authenticated user to see pending verifications
-    
+    """List bakeries pending verification (admin only)"""
     pending_bakeries = Bakery.query.filter_by(verification_status='pending').all()
     
     return jsonify({
@@ -286,13 +314,10 @@ def list_pending_verifications():
     }), 200
 
 @bakeries_bp.route('/<bakery_id>/verification', methods=['PUT'])
-@jwt_required()
+@require_admin()
 def update_bakery_verification(bakery_id):
-    """Update bakery verification status (super admin only)"""
+    """Update bakery verification status (admin only)"""
     schema = BakeryVerificationSchema()
-    
-    # TODO: Add super admin check here
-    # For now, allowing any authenticated user to update verification
     
     try:
         data = schema.load(request.get_json())
@@ -324,5 +349,4 @@ def update_bakery_verification(bakery_id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': 'Failed to update verification'}), 500
-        return jsonify({'error': 'Failed to invite user'}), 500
+        return jsonify({'error': 'Failed to update verification', 'details': str(e)}), 500
