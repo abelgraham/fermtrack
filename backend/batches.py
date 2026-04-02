@@ -21,6 +21,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import Schema, fields, ValidationError
 from models import db, Batch, BatchAction, FermentationStage, User
+from middleware import require_bakery, get_current_bakery_id
 from datetime import datetime
 import uuid
 
@@ -59,23 +60,29 @@ class FermentationStageSchema(Schema):
 
 @batches_bp.route('', methods=['POST'])
 @jwt_required()
+@require_bakery
 def create_batch():
-    """Create a new fermentation batch"""
+    """Create a new fermentation batch in current bakery"""
     schema = BatchCreateSchema()
     current_user_id = get_jwt_identity()
+    bakery_id = get_current_bakery_id()
     
     try:
         data = schema.load(request.get_json())
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
-    # Check if batch_id already exists
-    existing_batch = Batch.query.filter_by(batch_id=data['batch_id']).first()
+    # Check if batch_id already exists in this bakery
+    existing_batch = Batch.query.filter_by(
+        bakery_id=bakery_id, 
+        batch_id=data['batch_id']
+    ).first()
     if existing_batch:
-        return jsonify({'error': 'Batch ID already exists'}), 409
+        return jsonify({'error': 'Batch ID already exists in this bakery'}), 409
     
     # Create new batch
     batch = Batch(
+        bakery_id=bakery_id,
         batch_id=data['batch_id'],
         recipe_name=data['recipe_name'],
         dough_weight=data['dough_weight'],
@@ -101,13 +108,15 @@ def create_batch():
 
 @batches_bp.route('', methods=['GET'])
 @jwt_required()
+@require_bakery
 def list_batches():
-    """List all batches with optional filtering"""
+    """List batches in current bakery with optional filtering"""
+    bakery_id = get_current_bakery_id()
     status_filter = request.args.get('status')
     limit = request.args.get('limit', type=int, default=50)
     offset = request.args.get('offset', type=int, default=0)
     
-    query = Batch.query
+    query = Batch.query.filter_by(bakery_id=bakery_id)
     
     if status_filter:
         query = query.filter(Batch.status == status_filter)
@@ -121,9 +130,11 @@ def list_batches():
 
 @batches_bp.route('/<batch_id>', methods=['GET'])
 @jwt_required()
+@require_bakery
 def get_batch(batch_id):
-    """Get a specific batch by ID"""
-    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    """Get a specific batch by ID in current bakery"""
+    bakery_id = get_current_bakery_id()
+    batch = Batch.query.filter_by(bakery_id=bakery_id, batch_id=batch_id).first()
     
     if not batch:
         return jsonify({'error': 'Batch not found'}), 404
@@ -132,16 +143,18 @@ def get_batch(batch_id):
 
 @batches_bp.route('/<batch_id>', methods=['PUT'])
 @jwt_required()
+@require_bakery
 def update_batch(batch_id):
-    """Update a batch"""
+    """Update a batch in current bakery"""
     schema = BatchUpdateSchema()
+    bakery_id = get_current_bakery_id()
     
     try:
         data = schema.load(request.get_json())
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
-    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    batch = Batch.query.filter_by(bakery_id=bakery_id, batch_id=batch_id).first()
     if not batch:
         return jsonify({'error': 'Batch not found'}), 404
     
@@ -164,17 +177,19 @@ def update_batch(batch_id):
 
 @batches_bp.route('/<batch_id>/actions', methods=['POST'])
 @jwt_required()
+@require_bakery
 def add_batch_action(batch_id):
-    """Add an action to a batch"""
+    """Add an action to a batch in current bakery"""
     schema = BatchActionSchema()
     current_user_id = get_jwt_identity()
+    bakery_id = get_current_bakery_id()
     
     try:
         data = schema.load(request.get_json())
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
-    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    batch = Batch.query.filter_by(bakery_id=bakery_id, batch_id=batch_id).first()
     if not batch:
         return jsonify({'error': 'Batch not found'}), 404
     
@@ -210,16 +225,18 @@ def add_batch_action(batch_id):
 
 @batches_bp.route('/<batch_id>/fermentation-stages', methods=['POST'])
 @jwt_required()
+@require_bakery
 def add_fermentation_stage(batch_id):
-    """Add a fermentation stage to a batch"""
+    """Add a fermentation stage to a batch in current bakery"""
     schema = FermentationStageSchema()
+    bakery_id = get_current_bakery_id()
     
     try:
         data = schema.load(request.get_json())
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
-    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    batch = Batch.query.filter_by(bakery_id=bakery_id, batch_id=batch_id).first()
     if not batch:
         return jsonify({'error': 'Batch not found'}), 404
     
@@ -251,9 +268,11 @@ def add_fermentation_stage(batch_id):
 
 @batches_bp.route('/<batch_id>/fermentation-stages/<stage_id>/complete', methods=['PUT'])
 @jwt_required()
+@require_bakery
 def complete_fermentation_stage(batch_id, stage_id):
-    """Mark a fermentation stage as complete"""
-    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    """Mark a fermentation stage as complete in current bakery"""
+    bakery_id = get_current_bakery_id()
+    batch = Batch.query.filter_by(bakery_id=bakery_id, batch_id=batch_id).first()
     if not batch:
         return jsonify({'error': 'Batch not found'}), 404
     
@@ -277,15 +296,19 @@ def complete_fermentation_stage(batch_id, stage_id):
 
 @batches_bp.route('/<batch_id>', methods=['DELETE'])
 @jwt_required()
+@require_bakery
 def delete_batch(batch_id):
-    """Delete a batch (admin/manager only)"""
+    """Delete a batch in current bakery (admin/manager only)"""
     current_user_id = get_jwt_identity()
     current_user = User.query.get(current_user_id)
+    bakery_id = get_current_bakery_id()
     
-    if not current_user or current_user.role not in ['admin', 'manager']:
+    # Check if user has admin/manager role in current bakery
+    user_role = current_user.get_role_in_bakery(bakery_id) if current_user else None
+    if not user_role or user_role not in ['admin', 'manager']:
         return jsonify({'error': 'Insufficient permissions'}), 403
     
-    batch = Batch.query.filter_by(batch_id=batch_id).first()
+    batch = Batch.query.filter_by(bakery_id=bakery_id, batch_id=batch_id).first()
     if not batch:
         return jsonify({'error': 'Batch not found'}), 404
     

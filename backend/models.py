@@ -24,6 +24,73 @@ import uuid
 
 db = SQLAlchemy()
 
+class Bakery(db.Model):
+    """Bakery model for multi-tenancy"""
+    __tablename__ = 'bakeries'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    slug = db.Column(db.String(50), unique=True, nullable=False, index=True)  # Used in subdomain
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    timezone = db.Column(db.String(50), default='UTC')
+    is_active = db.Column(db.Boolean, default=True)
+    # Verification fields temporarily removed - will be added back with proper migration
+    # is_verified = db.Column(db.Boolean, default=False)
+    # verification_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    # verification_notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user_bakeries = db.relationship('UserBakery', back_populates='bakery', cascade='all, delete-orphan')
+    batches = db.relationship('Batch', backref='bakery', lazy=True, cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        """Convert bakery to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'slug': self.slug,
+            'name': self.name,
+            'description': self.description,
+            'timezone': self.timezone,
+            'is_active': self.is_active,
+            # Verification fields temporarily removed - will be added back with proper migration
+            # 'is_verified': self.is_verified,
+            # 'verification_status': self.verification_status, 
+            # 'verification_notes': self.verification_notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class UserBakery(db.Model):
+    """Association model for User-Bakery many-to-many relationship with roles"""
+    __tablename__ = 'user_bakeries'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    bakery_id = db.Column(db.String(36), db.ForeignKey('bakeries.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='baker')  # baker, manager, admin
+    is_active = db.Column(db.Boolean, default=True)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', back_populates='user_bakeries')
+    bakery = db.relationship('Bakery', back_populates='user_bakeries')
+    
+    # Unique constraint to prevent duplicate user-bakery combinations
+    __table_args__ = (db.UniqueConstraint('user_id', 'bakery_id', name='uq_user_bakery'),)
+    
+    def to_dict(self):
+        """Convert user-bakery association to dictionary"""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'bakery_id': self.bakery_id,
+            'bakery': self.bakery.to_dict() if self.bakery else None,
+            'role': self.role,
+            'is_active': self.is_active,
+            'joined_at': self.joined_at.isoformat() if self.joined_at else None
+        }
+
 class User(db.Model):
     """User model for authentication and authorization"""
     __tablename__ = 'users'
@@ -32,13 +99,12 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='baker')  # baker, manager, admin
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    batches = db.relationship('Batch', backref='creator', lazy=True, cascade='all, delete-orphan')
+    user_bakeries = db.relationship('UserBakery', back_populates='user', cascade='all, delete-orphan')
     actions = db.relationship('BatchAction', backref='user', lazy=True)
     
     def set_password(self, password):
@@ -49,23 +115,43 @@ class User(db.Model):
         """Check if provided password matches hash"""
         return check_password_hash(self.password_hash, password)
     
-    def to_dict(self):
+    def get_bakeries(self):
+        """Get all bakeries this user has access to"""
+        return [ub.bakery for ub in self.user_bakeries if ub.is_active and ub.bakery.is_active]
+    
+    def get_role_in_bakery(self, bakery_id):
+        """Get user's role in a specific bakery"""
+        user_bakery = next((ub for ub in self.user_bakeries 
+                           if ub.bakery_id == bakery_id and ub.is_active), None)
+        return user_bakery.role if user_bakery else None
+    
+    def has_access_to_bakery(self, bakery_id):
+        """Check if user has access to a specific bakery"""
+        return any(ub.bakery_id == bakery_id and ub.is_active 
+                  for ub in self.user_bakeries)
+    
+    def to_dict(self, include_bakeries=False):
         """Convert user to dictionary for JSON serialization"""
-        return {
+        result = {
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'role': self.role,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+        
+        if include_bakeries:
+            result['bakeries'] = [ub.to_dict() for ub in self.user_bakeries if ub.is_active]
+        
+        return result
 
 class Batch(db.Model):
     """Batch model for tracking fermentation batches"""
     __tablename__ = 'batches'
     
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    batch_id = db.Column(db.String(50), unique=True, nullable=False, index=True)  # Human-readable ID
+    bakery_id = db.Column(db.String(36), db.ForeignKey('bakeries.id'), nullable=False)
+    batch_id = db.Column(db.String(50), nullable=False, index=True)  # Human-readable ID (unique per bakery)
     recipe_name = db.Column(db.String(100), nullable=False)
     dough_weight = db.Column(db.Float, nullable=False)  # Weight in grams
     status = db.Column(db.String(20), nullable=False, default='mixing')  # mixing, bulk_ferment, divided, proofing, ready, baked, discarded
@@ -77,13 +163,18 @@ class Batch(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
+    creator = db.relationship('User', backref='created_batches', foreign_keys=[created_by])
     actions = db.relationship('BatchAction', backref='batch', lazy=True, cascade='all, delete-orphan')
     fermentation_stages = db.relationship('FermentationStage', backref='batch', lazy=True, cascade='all, delete-orphan')
+    
+    # Unique constraint for batch_id per bakery
+    __table_args__ = (db.UniqueConstraint('bakery_id', 'batch_id', name='uq_bakery_batch_id'),)
     
     def to_dict(self):
         """Convert batch to dictionary for JSON serialization"""
         return {
             'id': self.id,
+            'bakery_id': self.bakery_id,
             'batch_id': self.batch_id,
             'recipe_name': self.recipe_name,
             'dough_weight': self.dough_weight,

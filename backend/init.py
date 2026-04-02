@@ -99,7 +99,7 @@ def install_dependencies():
         return False
 
 def initialize_database():
-    """Initialize the database"""
+    """Initialize the database with multi-tenant schema"""
     venv_python = os.path.join('venv', 'bin', 'python') if os.name != 'nt' else os.path.join('venv', 'Scripts', 'python.exe')
     
     if not os.path.exists(venv_python):
@@ -107,21 +107,140 @@ def initialize_database():
         return False
     
     try:
-        # Run the app briefly to create database tables
+        # Run database initialization script
         env = os.environ.copy()
         env['FLASK_ENV'] = 'development'
         result = subprocess.run([venv_python, '-c', '''
 import sys
 sys.path.insert(0, ".")
 from app import create_app
+from models import db, User, Bakery, UserBakery
+
 app = create_app()
 with app.app_context():
-    print("Database initialized successfully")
+    # Create all tables
+    db.create_all()
+    print("✅ Database tables created")
+    
+    # Clean up old bakery entries
+    old_demo = Bakery.query.filter_by(slug='demo').first()
+    if old_demo:
+        # Transfer any user associations to demo1 bakery
+        demo1_bakery = Bakery.query.filter_by(slug='demo1').first()
+        if demo1_bakery:
+            # Update user associations
+            old_associations = UserBakery.query.filter_by(bakery_id=old_demo.id).all()
+            for assoc in old_associations:
+                existing = UserBakery.query.filter_by(
+                    user_id=assoc.user_id,
+                    bakery_id=demo1_bakery.id
+                ).first()
+                if not existing:
+                    assoc.bakery_id = demo1_bakery.id
+        db.session.delete(old_demo)
+        print("✅ Removed old demo bakery")
+    
+    old_haus = Bakery.query.filter_by(slug='haus').first()
+    if old_haus:
+        # Remove user associations
+        UserBakery.query.filter_by(bakery_id=old_haus.id).delete()
+        db.session.delete(old_haus)
+        print("✅ Removed Haus bakery")
+    
+    db.session.commit()
+    
+    # Create default bakery
+    default_bakery = Bakery.query.filter_by(slug='demo1').first()
+    if not default_bakery:
+        default_bakery = Bakery(
+            slug='demo1',
+            name='Demo Bakery 1',
+            description='First demo bakery for testing',
+            timezone='UTC'
+        )
+        db.session.add(default_bakery)
+        db.session.flush()
+        print("✅ Created demo bakery 1")
+    else:
+        print("✅ Demo bakery 1 already exists")
+    
+    # Create second demo bakery for testing multi-tenancy
+    demo2_bakery = Bakery.query.filter_by(slug='demo2').first()
+    if not demo2_bakery:
+        demo2_bakery = Bakery(
+            slug='demo2',
+            name='Demo Bakery 2',
+            description='Second demo bakery for multi-tenant testing',
+            timezone='UTC'
+        )
+        db.session.add(demo2_bakery)
+        db.session.flush()
+        print("✅ Created demo bakery 2")
+    else:
+        print("✅ Demo bakery 2 already exists")
+    
+    # Create default admin user
+    admin_user = User.query.filter_by(username='admin').first()
+    if not admin_user:
+        admin_user = User(
+            username='admin',
+            email='admin@demo.fermtrack.local'
+        )
+        admin_user.set_password('admin123')
+        db.session.add(admin_user)
+        db.session.flush()
+        
+        # Associate admin with demo bakery 1
+        user_bakery = UserBakery(
+            user_id=admin_user.id,
+            bakery_id=default_bakery.id,
+            role='admin'
+        )
+        db.session.add(user_bakery)
+        print("✅ Created default admin user")
+    else:
+        # Ensure admin has access to demo bakery 1
+        user_bakery = UserBakery.query.filter_by(
+            user_id=admin_user.id,
+            bakery_id=default_bakery.id
+        ).first()
+        if not user_bakery:
+            user_bakery = UserBakery(
+                user_id=admin_user.id,
+                bakery_id=default_bakery.id,
+                role='admin'
+            )
+            db.session.add(user_bakery)
+            print("✅ Added admin access to demo bakery 1")
+        else:
+            print("✅ Admin user already has access to demo bakery 1")
+    
+    # Ensure admin has access to demo bakery 2
+    demo2_user_bakery = UserBakery.query.filter_by(
+        user_id=admin_user.id,
+        bakery_id=demo2_bakery.id
+    ).first()
+    if not demo2_user_bakery:
+        demo2_user_bakery = UserBakery(
+            user_id=admin_user.id,
+            bakery_id=demo2_bakery.id,
+            role='admin'
+        )
+        db.session.add(demo2_user_bakery)
+        print("✅ Added admin access to demo bakery 2")
+    else:
+        print("✅ Admin user already has access to demo bakery 2")
+    
+    db.session.commit()
+    print("✅ Database initialization completed successfully")
+    
 '''], check=True, capture_output=True, text=True, env=env)
-        print("✅ Database initialized successfully")
+        print("✅ Database initialized with default data")
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to initialize database: {e.stderr}")
+        if e.stdout:
+            print(f"Output: {e.stdout}")
         return False
 
 def print_next_steps():
@@ -138,10 +257,18 @@ def print_next_steps():
     print("   python app.py")
     print("\n3. The API will be available at:")
     print("   http://localhost:5000")
+    print("   http://demo.localhost:5000 (demo bakery)")
     print("\n4. Default admin credentials:")
     print("   Username: admin")
-    print("   Password: admin123")
+    print("   Password: admin123") 
     print("   ⚠️  Change these in production!")
+    print("\n5. Multi-tenant setup:")
+    print("   - Demo bakery: demo.localhost:5000")
+    print("   - Add custom hosts to /etc/hosts if needed")
+    print("   - Use X-Bakery-Slug header for API testing")
+    print("\n6. API documentation:")
+    print("   See README.md for detailed endpoint information")
+    print("\n" + "="*60)
     print("\n5. API documentation:")
     print("   See README.md for detailed endpoint information")
     print("\n" + "="*60)

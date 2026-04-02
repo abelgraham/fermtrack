@@ -459,6 +459,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           <label for="loginPassword">Password</label>
           <input type="password" id="loginPassword" class="form-control" placeholder="Enter password">
         </div>
+        <div class="form-group">
+          <label for="loginBakery">Select Bakery</label>
+          <select id="loginBakery" class="form-control" required>
+            <option value="">Choose a bakery...</option>
+          </select>
+        </div>
         <button onclick="login()" class="btn btn-primary" style="width: 100%; margin-bottom: 15px;">Login</button>
         <div class="auth-toggle">
           Don't have an account? <a href="#" onclick="showRegister()">Register here</a>
@@ -480,11 +486,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           <input type="password" id="regPassword" class="form-control" placeholder="Choose password">
         </div>
         <div class="form-group">
-          <label for="regRole">Role</label>
-          <select id="regRole" class="form-control">
-            <option value="baker">Baker</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
+          <label for="regBakery">Select Bakery</label>
+          <select id="regBakery" class="form-control" required>
+            <option value="">Choose a bakery...</option>
           </select>
         </div>
         <button onclick="register()" class="btn btn-primary" style="width: 100%; margin-bottom: 15px;">Register</button>
@@ -501,6 +505,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       <div class="header">
         <div class="logo">FermTrack</div>
         <div class="user-info">
+          <div class="bakery-selector" style="margin-right: 20px;">
+            <label for="bakerySelect" style="display: block; color: #bbb; font-size: 0.85rem; margin-bottom: 4px;">Bakery:</label>
+            <select id="bakerySelect" class="form-control" style="width: 200px; padding: 6px 10px; font-size: 0.9rem;" onchange="switchBakery()">
+              <option value="">Loading bakeries...</option>
+            </select>
+          </div>
           <span id="userDisplay"></span>
           <div class="navbar-actions">
             <button onclick="showCreateBatch()" class="btn btn-primary btn-small">New Batch</button>
@@ -681,6 +691,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     // Global state
     let currentUser = null;
     let authToken = localStorage.getItem('fermtrack_token');
+    let currentBakery = localStorage.getItem('fermtrack_current_bakery');
+    let currentBakeryRole = null; // Store current user's role in selected bakery
+    let availableBakeries = [];
     let batches = [];
     let currentBatchId = null;
 
@@ -707,14 +720,162 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     
     const API_BASE = getBackendUrl();
 
+    // Helper function to get headers with bakery context
+    const getAuthHeaders = (includeBakery = true) => {
+      console.log('getAuthHeaders called:', { includeBakery, currentBakery, authToken: !!authToken });
+      const headers = { 'Authorization': `Bearer ${authToken}` };
+      if (includeBakery && currentBakery) {
+        headers['X-Bakery-Slug'] = currentBakery;
+        console.log('Added bakery header:', currentBakery);
+      } else if (includeBakery && !currentBakery) {
+        console.warn('Bakery context requested but currentBakery is not set:', currentBakery);
+      }
+      return headers;
+    };
+
+    // Helper function to get current user's role in selected bakery
+    const getCurrentUserRole = () => {
+      if (!currentUser || !currentBakery) return 'user';
+      
+      // Check if we have the role cached
+      if (currentBakeryRole) return currentBakeryRole;
+      
+      // Find role from user's bakeries
+      if (currentUser.bakeries && Array.isArray(currentUser.bakeries)) {
+        const bakeryAssoc = currentUser.bakeries.find(b => 
+          b.bakery && b.bakery.slug === currentBakery
+        );
+        return bakeryAssoc ? bakeryAssoc.role : 'user';
+      }
+      
+      return 'user';
+    };
+
+    // Helper function to update user display with current role
+    const updateUserDisplay = () => {
+      const role = getCurrentUserRole();
+      if (currentUser) {
+        document.getElementById('userDisplay').textContent = `${currentUser.username} (${role})`;
+      }
+    };
+
     // Initialize app
     document.addEventListener('DOMContentLoaded', () => {
+      console.log('=== FermTrack App Initializing ===');
+      console.log('Initial authToken from localStorage:', authToken);
+      console.log('Initial currentBakery from localStorage:', currentBakery);
+      
+      loadAvailableBakeries(); // Load bakeries first
       if (authToken) {
+        console.log('Found existing token, validating...');
         validateToken();
       } else {
+        console.log('No token found, showing auth screen');
         showAuth();
       }
     });
+
+    // Bakery management functions
+    async function loadAvailableBakeries() {
+      try {
+        const response = await fetch(`${API_BASE}/auth/bakeries/available`);
+        if (response.ok) {
+          const data = await response.json();
+          availableBakeries = data.bakeries || [];
+          updateBakerySelectors();
+        }
+      } catch (error) {
+        console.error('Error loading available bakeries:', error);
+      }
+    }
+
+    function updateBakerySelectors() {
+      // Update registration form bakery selector
+      const regBakerySelect = document.getElementById('regBakery');
+      if (regBakerySelect) {
+        regBakerySelect.innerHTML = '<option value="">Choose a bakery...</option>' + 
+          availableBakeries.map(bakery => 
+            `<option value="${bakery.slug}">${bakery.name}</option>`
+          ).join('');
+      }
+
+      // Update login form bakery selector
+      const loginBakerySelect = document.getElementById('loginBakery');
+      if (loginBakerySelect) {
+        loginBakerySelect.innerHTML = '<option value="">Choose a bakery...</option>' + 
+          availableBakeries.map(bakery => 
+            `<option value="${bakery.slug}">${bakery.name}</option>`
+          ).join('');
+      }
+
+      // Update main app bakery selector
+      const bakerySelect = document.getElementById('bakerySelect');
+      if (bakerySelect && authToken) {
+        bakerySelect.innerHTML = availableBakeries.map(bakery => 
+          `<option value="${bakery.slug}" ${bakery.slug === currentBakery ? 'selected' : ''}>${bakery.name}</option>`
+        ).join('');
+        
+        // If no bakery is selected, try to select default
+        if (!currentBakery && availableBakeries.length > 0) {
+          const defaultBakery = availableBakeries.find(b => b.is_default) || availableBakeries[0];
+          if (defaultBakery) {
+            console.log('Auto-selecting default bakery:', defaultBakery.slug);
+            currentBakery = defaultBakery.slug;
+            localStorage.setItem('fermtrack_current_bakery', currentBakery);
+            bakerySelect.value = currentBakery;
+          }
+        }
+        
+        console.log('Bakery selector updated. Current bakery:', currentBakery);
+      }
+    }
+
+    async function switchBakery() {
+      const bakerySelect = document.getElementById('bakerySelect');
+      const newBakery = bakerySelect.value;
+      
+      if (newBakery !== currentBakery) {
+        currentBakery = newBakery;
+        currentBakeryRole = null; // Reset cached role
+        localStorage.setItem('fermtrack_current_bakery', currentBakery);
+        
+        // Update user display with new role
+        updateUserDisplay();
+        
+        // Reload batches for the new bakery
+        if (currentBakery) {
+          loadBatches();
+          showAlert(`Switched to ${availableBakeries.find(b => b.slug === currentBakery)?.name || 'bakery'}`, 'success');
+        }
+      }
+    }
+
+    async function loadUserDefaultBakery() {
+      console.log('Loading user default bakery...');
+      try {
+        const response = await fetch(`${API_BASE}/auth/context/default-bakery`, {
+          headers: getAuthHeaders(false)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Default bakery response:', data);
+          if (data.default_bakery) {
+            currentBakery = data.default_bakery.slug;
+            currentBakeryRole = data.default_bakery.role; // Store the role
+            localStorage.setItem('fermtrack_current_bakery', currentBakery);
+            console.log('Set current bakery from default:', currentBakery);
+            updateUserDisplay(); // Update the display with correct role
+          } else {
+            console.warn('No default bakery found in response');
+          }
+        } else {
+          console.error('Failed to get default bakery:', response.status);
+        }
+      } catch (error) {
+        console.error('Error loading default bakery:', error);
+      }
+    }
 
     // Auth functions
     function showAuth() {
@@ -725,7 +886,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     function showApp() {
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('appScreen').classList.remove('hidden');
-      loadBatches();
+      console.log('Showing app, current bakery:', currentBakery);
+      // Ensure we have bakery context before loading batches
+      if (currentBakery) {
+        loadBatches();
+      } else {
+        console.warn('No bakery context when showing app');
+        document.getElementById('batchesGrid').innerHTML = 
+          '<div class="loading">Please select a bakery to view batches.</div>';
+      }
     }
 
     function showLogin() {
@@ -739,15 +908,24 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     }
 
     async function validateToken() {
+      console.log('Validating token...');
       try {
         const response = await fetch(`${API_BASE}/auth/me`, {
-          headers: { 'Authorization': `Bearer ${authToken}` }
+          headers: getAuthHeaders(false) // Don't need bakery context for /me
         });
         
         if (response.ok) {
           const data = await response.json();
           currentUser = data.user;
-          document.getElementById('userDisplay').textContent = `${currentUser.username} (${currentUser.role})`;
+          updateUserDisplay();
+          
+          // Load default bakery if not set
+          if (!currentBakery) {
+            console.log('No current bakery, loading default...');
+            await loadUserDefaultBakery();
+          }
+          
+          updateBakerySelectors(); // Update bakery selector after login
           showApp();
         } else {
           localStorage.removeItem('fermtrack_token');
@@ -763,9 +941,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     async function login() {
       const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
+      const bakerySlug = document.getElementById('loginBakery').value;
 
-      if (!username || !password) {
-        showAlert('Please enter username and password', 'error');
+      if (!username || !password || !bakerySlug) {
+        showAlert('Please enter username, password, and select a bakery', 'error');
         return;
       }
 
@@ -773,7 +952,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         const response = await fetch(`${API_BASE}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
+          body: JSON.stringify({ username, password, bakery_slug: bakerySlug })
         });
 
         const data = await response.json();
@@ -782,7 +961,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           authToken = data.access_token;
           localStorage.setItem('fermtrack_token', authToken);
           currentUser = data.user;
-          document.getElementById('userDisplay').textContent = `${currentUser.username} (${currentUser.role})`;
+          
+          // Set bakery context after successful login
+          currentBakery = bakerySlug;
+          localStorage.setItem('fermtrack_current_bakery', currentBakery);
+          console.log('Login successful, bakery set to:', currentBakery);
+          
+          updateUserDisplay();
+          updateBakerySelectors();
           showAlert('Login successful!', 'success');
           showApp();
         } else {
@@ -798,10 +984,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       const username = document.getElementById('regUsername').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
-      const role = document.getElementById('regRole').value;
+      const role = 'baker'; // Only baker role allowed during registration
+      const bakerySlug = document.getElementById('regBakery').value;
 
       // Client-side validation
-      if (!username || !email || !password) {
+      if (!username || !email || !password || !bakerySlug) {
         showAlert('Please fill in all fields', 'error');
         return;
       }
@@ -827,7 +1014,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         const response = await fetch(`${API_BASE}/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password, role })
+          body: JSON.stringify({ username, email, password, role, bakery_slug: bakerySlug })
         });
 
         const data = await response.json();
@@ -836,7 +1023,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           authToken = data.access_token;
           localStorage.setItem('fermtrack_token', authToken);
           currentUser = data.user;
-          document.getElementById('userDisplay').textContent = `${currentUser.username} (${currentUser.role})`;
+          
+          // Set bakery context after successful registration
+          currentBakery = bakerySlug;
+          localStorage.setItem('fermtrack_current_bakery', currentBakery);
+          
+          updateUserDisplay();
+          updateBakerySelectors();
           showAlert('Registration successful!', 'success');
           showApp();
         } else {
@@ -856,33 +1049,103 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
     function logout() {
       localStorage.removeItem('fermtrack_token');
+      localStorage.removeItem('fermtrack_current_bakery');
       authToken = null;
       currentUser = null;
+      currentBakery = null;
       document.getElementById('loginUsername').value = '';
       document.getElementById('loginPassword').value = '';
+      document.getElementById('loginBakery').value = '';
       showAuth();
       showAlert('Logged out successfully', 'success');
     }
 
     // Batch management functions
     async function loadBatches() {
+      console.log('=== loadBatches called ===');
+      console.log('currentBakery:', currentBakery);
+      console.log('authToken exists:', !!authToken);
+      console.log('API_BASE:', API_BASE);
+      
+      if (!currentBakery) {
+        console.log('No bakery selected, showing message');
+        document.getElementById('batchesGrid').innerHTML = 
+          '<div class="loading">Please select a bakery to view batches.</div>';
+        return;
+      }
+
+      console.log('Loading batches for bakery:', currentBakery);
+      console.log('Auth token:', authToken ? 'Present' : 'Missing');
+
       try {
-        const response = await fetch(`${API_BASE}/batches`, {
-          headers: { 'Authorization': `Bearer ${authToken}` }
-        });
+        const headers = getAuthHeaders(true);
+        console.log('Request headers:', headers);
+        const url = `${API_BASE}/batches`;
+        console.log('Request URL:', url);
+        
+        const response = await fetch(url, { headers });
+
+        console.log('Batches response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (response.ok) {
           const data = await response.json();
+          console.log('Batches loaded successfully:', data);
           batches = data.batches;
           renderBatches();
         } else {
-          showAlert('Failed to load batches', 'error');
+          const errorText = await response.text();
+          console.error('Batches loading error response:', errorText);
+          
+          let errorData = {};
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            console.error('Could not parse error response as JSON');
+          }
+          
+          if (response.status === 400 && errorData.available_bakeries) {
+            // Handle bakery context error gracefully
+            showAlert('No bakery selected. Please choose a bakery from the dropdown above.', 'error');
+            document.getElementById('batchesGrid').innerHTML = 
+              '<div class="loading">Please select a bakery from the dropdown above to view batches.</div>';
+          } else if (response.status === 401) {
+            showAlert('Session expired. Please login again.', 'error');
+            logout();
+          } else {
+            showAlert(`Failed to load batches: ${errorData.error || 'Unknown error'} (Status: ${response.status})`, 'error');
+          }
         }
       } catch (error) {
         console.error('Error loading batches:', error);
-        showAlert('Error loading batches', 'error');
+        showAlert('Error loading batches: ' + error.message, 'error');
       }
     }
+
+    // Debug function - call from browser console  
+    window.debugFermTrack = function() {
+      console.log('=== FermTrack Debug Info ===');
+      console.log('authToken:', authToken);
+      console.log('currentBakery:', currentBakery);
+      console.log('currentUser:', currentUser);
+      console.log('availableBakeries:', availableBakeries);
+      console.log('API_BASE:', API_BASE);
+      console.log('localStorage fermtrack_token:', localStorage.getItem('fermtrack_token'));
+      console.log('localStorage fermtrack_current_bakery:', localStorage.getItem('fermtrack_current_bakery'));
+      
+      // Test auth headers
+      const headers = getAuthHeaders(true);
+      console.log('Generated auth headers:', headers);
+      
+      return {
+        authToken,
+        currentBakery, 
+        currentUser,
+        availableBakeries,
+        API_BASE,
+        headers
+      };
+    };
 
     function renderBatches() {
       const container = document.getElementById('batchesGrid');
@@ -982,7 +1245,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           method,
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            ...getAuthHeaders(true) // Include bakery header
           },
           body: JSON.stringify(batchData)
         });
@@ -1008,7 +1271,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       try {
         const response = await fetch(`${API_BASE}/batches/${batchId}`, {
           method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${authToken}` }
+          headers: getAuthHeaders(true)
         });
 
         if (response.ok) {
@@ -1041,7 +1304,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     async function loadBatchDetails(batchId) {
       try {
         const response = await fetch(`${API_BASE}/batches/${batchId}`, {
-          headers: { 'Authorization': `Bearer ${authToken}` }
+          headers: getAuthHeaders(true)
         });
 
         if (response.ok) {
@@ -1147,7 +1410,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            ...getAuthHeaders(true)
           },
           body: JSON.stringify(actionData)
         });
@@ -1187,7 +1450,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            ...getAuthHeaders(true)
           },
           body: JSON.stringify(stageData)
         });
@@ -1216,7 +1479,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       try {
         const response = await fetch(`${API_BASE}/batches/${currentBatchId}/fermentation-stages/${stageId}/complete`, {
           method: 'PUT',
-          headers: { 'Authorization': `Bearer ${authToken}` }
+          headers: getAuthHeaders(true)
         });
 
         if (response.ok) {

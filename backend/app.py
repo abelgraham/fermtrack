@@ -21,9 +21,11 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from config import config
-from models import db, User, Batch, BatchAction, FermentationStage
+from models import db, User, Batch, BatchAction, FermentationStage, Bakery, UserBakery
 from auth import auth_bp
 from batches import batches_bp
+from bakeries import bakeries_bp
+from middleware import TenantMiddleware
 import os
 
 def create_app(config_name=None):
@@ -38,6 +40,9 @@ def create_app(config_name=None):
     db.init_app(app)
     jwt = JWTManager(app)
     
+    # Initialize tenant middleware
+    tenant_middleware = TenantMiddleware(app)
+    
     # Configure CORS - Allow access from local network devices  
     cors_origins = ['*'] if os.environ.get('FLASK_ENV', 'development') == 'development' else [
         'http://localhost:3000', 'http://127.0.0.1:3000', 
@@ -48,12 +53,13 @@ def create_app(config_name=None):
     CORS(app, 
          origins=cors_origins,
          supports_credentials=True,
-         allow_headers=['Content-Type', 'Authorization'],
+         allow_headers=['Content-Type', 'Authorization', 'X-Bakery-Slug'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(batches_bp)
+    app.register_blueprint(bakeries_bp)
     
     # JWT error handlers
     @jwt.expired_token_loader
@@ -92,6 +98,7 @@ def create_app(config_name=None):
             'endpoints': {
                 'authentication': '/api/auth',
                 'batches': '/api/batches',
+                'bakeries': '/api/bakeries',
                 'health': '/api/health'
             }
         }), 200
@@ -100,31 +107,13 @@ def create_app(config_name=None):
     @app.errorhandler(404)
     def not_found(error):
         return jsonify({'error': 'Endpoint not found'}), 404
-    
     @app.errorhandler(500)
     def internal_error(error):
         return jsonify({'error': 'Internal server error'}), 500
     
-    # Create database tables
+    # Initialize database tables only
     with app.app_context():
         db.create_all()
-        
-        # Create default admin user if none exists
-        if not User.query.filter_by(role='admin').first():
-            admin_user = User(
-                username='admin',
-                email='admin@fermtrack.com',
-                role='admin'
-            )
-            admin_user.set_password('admin123')  # Change this in production!
-            
-            try:
-                db.session.add(admin_user)
-                db.session.commit()
-                print("Default admin user created: admin/admin123")
-            except Exception as e:
-                db.session.rollback()
-                print(f"Could not create default admin user: {e}")
     
     return app
 
