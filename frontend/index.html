@@ -30,7 +30,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
   
   <!-- Content Security Policy -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.fermtrack.com wss://*.fermtrack.com; img-src 'self' data: https:; object-src 'none'; base-uri 'self'; form-action 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' http://localhost:5000 https://*.fermtrack.com wss://*.fermtrack.com; img-src 'self' data: https:; object-src 'none'; base-uri 'self'; form-action 'self';" />
   
   <!-- Disable Cloudflare features that cause issues -->
   <meta name="cf-2fa-verify" content="false" />
@@ -1327,7 +1327,6 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
       console.log('Redirecting to HTTPS...');
       location.replace('https:' + window.location.href.substring(window.location.protocol.length));
-      return;
     }
 
     // Initialize app
@@ -2359,7 +2358,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       }
     }
 
-    // Make admin functions globally available for HTML onclick handlers
+    // Make functions globally available for HTML onclick handlers
+    window.login = login;
+    window.register = register;
+    window.showLogin = showLogin;
+    window.showRegister = showRegister;
+    window.showBakeryApplication = showBakeryApplication;
+    window.submitBakeryApplication = submitBakeryApplication;
     window.showAdminLogin = showAdminLogin;
     window.closeAdminLoginModal = closeAdminLoginModal;
     window.handleAdminKeyPress = handleAdminKeyPress;

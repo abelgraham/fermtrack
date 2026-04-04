@@ -642,3 +642,4 @@ window.showAdminTab = showAdminTab;
 window.showAddUser = showAddUser;
 window.hideAddUser = hideAddUser;
 window.addUser = addUser;
+window.refreshUsers = refreshUsers;
