@@ -38,6 +38,13 @@ class Bakery(db.Model):
     is_verified = db.Column(db.Boolean, default=False)
     verification_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
     verification_notes = db.Column(db.Text)
+    
+    # Credit system fields
+    credit_type = db.Column(db.String(20), default='limited')  # limited, unlimited
+    credit_limit = db.Column(db.Integer, default=10)  # Monthly credit limit for limited accounts
+    credit_used = db.Column(db.Integer, default=0)  # Credits used this cycle
+    credit_reset_date = db.Column(db.DateTime, default=lambda: datetime.utcnow().replace(day=1))  # Monthly reset
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -57,8 +64,70 @@ class Bakery(db.Model):
             'is_verified': self.is_verified,
             'verification_status': self.verification_status, 
             'verification_notes': self.verification_notes,
+            'credit_type': self.credit_type,
+            'credit_limit': self.credit_limit,
+            'credit_used': self.credit_used,
+            'credit_remaining': self.get_credit_remaining(),
+            'credit_reset_date': self.credit_reset_date.isoformat() if self.credit_reset_date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+        
+    def get_credit_remaining(self):
+        """Get remaining credits for this bakery"""
+        if self.credit_type == 'unlimited':
+            return -1  # -1 indicates unlimited
+        return max(0, self.credit_limit - self.credit_used)
+    
+    def can_create_batch(self):
+        """Check if bakery can create a new batch based on credit limits"""
+        # Unverified bakeries have stricter limits
+        if not self.is_verified:
+            if self.credit_type == 'unlimited':
+                return False, "Unlimited credits requires bakery verification"
+            # Unverified limited accounts get half the credits
+            effective_limit = self.credit_limit // 2
+            if self.credit_used >= effective_limit:
+                return False, f"Credit limit reached ({self.credit_used}/{effective_limit} for unverified account)"
+        
+        # Verified bakeries
+        if self.credit_type == 'unlimited':
+            return True, "Unlimited credits"
+        
+        if self.credit_used >= self.credit_limit:
+            return False, f"Credit limit reached ({self.credit_used}/{self.credit_limit})"
+        
+        return True, f"Credits available ({self.credit_used}/{self.credit_limit})"
+    
+    def consume_credit(self):
+        """Consume one credit for creating a batch"""
+        can_create, message = self.can_create_batch()
+        if not can_create:
+            return False, message
+        
+        self.credit_used += 1
+        return True, f"Credit consumed. Remaining: {self.get_credit_remaining()}"
+    
+    def reset_credits_if_needed(self):
+        """Reset credits if we're in a new billing cycle"""
+        from datetime import datetime, timedelta
+        import calendar
+        
+        now = datetime.utcnow()
+        
+        # If reset date is in the past, reset credits
+        if self.credit_reset_date and self.credit_reset_date < now:
+            self.credit_used = 0
+            
+            # Set next reset date to the first day of next month
+            if now.month == 12:
+                next_month = now.replace(year=now.year + 1, month=1, day=1)
+            else:
+                next_month = now.replace(month=now.month + 1, day=1)
+            
+            self.credit_reset_date = next_month
+            return True
+        
+        return False
 
 class UserBakeryApplication(db.Model):
     """Model for users applying to join bakeries"""
