@@ -1,0 +1,15 @@
+[Unit]
+Description=FermTrack Backend API
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/fermtrack/backend
+Environment=PYTHONPATH=/home/ec2-user/fermtrack/backend
+ExecStart=/usr/bin/python3 /home/ec2-user/fermtrack/backend/app.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
