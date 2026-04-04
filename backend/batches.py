@@ -20,7 +20,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import Schema, fields, ValidationError
-from models import db, Batch, BatchAction, FermentationStage, User
+from models import db, Batch, BatchAction, FermentationStage, User, Bakery
 from middleware import require_bakery, get_current_bakery_id
 from datetime import datetime
 import uuid
@@ -72,6 +72,24 @@ def create_batch():
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
+    # Get current bakery and check credit system
+    bakery = Bakery.query.get(bakery_id)
+    if not bakery:
+        return jsonify({'error': 'Bakery not found'}), 404
+    
+    # Check if bakery can create a batch (credit system)
+    if not bakery.can_create_batch():
+        return jsonify({
+            'error': 'Credit limit exceeded',
+            'message': 'You have reached your monthly batch creation limit. Consider upgrading to unlimited for verified bakeries.',
+            'credit_info': {
+                'credit_type': bakery.credit_type,
+                'credit_used': bakery.credit_used,
+                'credit_limit': bakery.credit_limit,
+                'credit_remaining': bakery.get_credit_remaining()
+            }
+        }), 429  # 429 Too Many Requests
+    
     # Check if batch_id already exists in this bakery
     existing_batch = Batch.query.filter_by(
         bakery_id=bakery_id, 
@@ -95,11 +113,20 @@ def create_batch():
     
     try:
         db.session.add(batch)
+        # Only consume credit if this is a limited bakery (not unlimited)
+        if bakery.credit_type == 'limited':
+            bakery.consume_credit()
         db.session.commit()
         
         return jsonify({
             'message': 'Batch created successfully',
-            'batch': batch.to_dict()
+            'batch': batch.to_dict(),
+            'credit_info': {
+                'credit_type': bakery.credit_type,
+                'credit_used': bakery.credit_used,
+                'credit_limit': bakery.credit_limit,
+                'credit_remaining': bakery.get_credit_remaining()
+            }
         }), 201
         
     except Exception as e:
@@ -116,6 +143,14 @@ def list_batches():
     limit = request.args.get('limit', type=int, default=50)
     offset = request.args.get('offset', type=int, default=0)
     
+    # Get bakery for credit info
+    bakery = Bakery.query.get(bakery_id)
+    if not bakery:
+        return jsonify({'error': 'Bakery not found'}), 404
+    
+    # Reset credits if needed (monthly cycle check)
+    bakery.reset_credits_if_needed()
+    
     query = Batch.query.filter_by(bakery_id=bakery_id)
     
     if status_filter:
@@ -125,7 +160,40 @@ def list_batches():
     
     return jsonify({
         'batches': [batch.to_dict() for batch in batches],
-        'total': query.count()
+        'total': query.count(),
+        'credit_info': {
+            'credit_type': bakery.credit_type,
+            'credit_used': bakery.credit_used,
+            'credit_limit': bakery.credit_limit,
+            'credit_remaining': bakery.get_credit_remaining(),
+            'can_create_batch': bakery.can_create_batch()
+        }
+    }), 200
+
+@batches_bp.route('/credits', methods=['GET'])
+@jwt_required()
+@require_bakery
+def get_credit_info():
+    """Get current credit information for the bakery"""
+    bakery_id = get_current_bakery_id()
+    bakery = Bakery.query.get(bakery_id)
+    
+    if not bakery:
+        return jsonify({'error': 'Bakery not found'}), 404
+    
+    # Reset credits if needed (monthly cycle check)
+    bakery.reset_credits_if_needed()
+    
+    return jsonify({
+        'credit_info': {
+            'credit_type': bakery.credit_type,
+            'credit_used': bakery.credit_used, 
+            'credit_limit': bakery.credit_limit,
+            'credit_remaining': bakery.get_credit_remaining(),
+            'can_create_batch': bakery.can_create_batch(),
+            'is_verified': bakery.is_verified,
+            'credit_reset_date': bakery.credit_reset_date.isoformat() if bakery.credit_reset_date else None
+        }
     }), 200
 
 @batches_bp.route('/<batch_id>', methods=['GET'])
