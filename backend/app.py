@@ -43,11 +43,12 @@ def create_app(config_name=None):
     # Initialize tenant middleware
     tenant_middleware = TenantMiddleware(app)
     
-    # Configure CORS - Allow access from local network devices  
+    # Configure CORS - Allow access from local network devices and production domains
     cors_origins = ['*'] if os.environ.get('FLASK_ENV', 'development') == 'development' else [
         'http://localhost:3000', 'http://127.0.0.1:3000', 
         'http://localhost:8080', 'http://127.0.0.1:8080',
-        'https://fermtrack.com'
+        'https://fermtrack.com', 'https://test.fermtrack.com',
+        'https://*.fermtrack.com'
     ]
     
     CORS(app, 
@@ -55,6 +56,17 @@ def create_app(config_name=None):
          supports_credentials=True,
          allow_headers=['Content-Type', 'Authorization', 'X-Bakery-Slug'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+    
+    # Security headers for production
+    @app.after_request
+    def add_security_headers(response):
+        if os.environ.get('FLASK_ENV') == 'production':
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-Frame-Options'] = 'DENY'
+            response.headers['X-XSS-Protection'] = '1; mode=block'
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
+            response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        return response
     
     # Register blueprints
     app.register_blueprint(auth_bp)

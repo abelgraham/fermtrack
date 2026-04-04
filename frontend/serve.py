@@ -71,13 +71,34 @@ def start_server(port=None, auto_open=True):
         # Create server
         handler = http.server.SimpleHTTPRequestHandler
         
-        # Add CORS headers for local development
+        # Add CORS headers and security headers for development
         class CORSRequestHandler(handler):
             def end_headers(self):
+                # CORS headers
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
                 self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+                
+                # Security headers
+                self.send_header('X-Content-Type-Options', 'nosniff')
+                self.send_header('X-Frame-Options', 'DENY')
+                self.send_header('X-XSS-Protection', '1; mode=block')
+                self.send_header('Referrer-Policy', 'strict-origin-when-cross-origin')
+                
+                # Cache control for static assets
+                if self.path.endswith(('.css', '.js', '.woff', '.woff2', '.ttf', '.eot')):
+                    self.send_header('Cache-Control', 'public, max-age=86400')  # 1 day
+                elif self.path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg')):
+                    self.send_header('Cache-Control', 'public, max-age=604800')  # 1 week
+                else:
+                    self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                
                 super().end_headers()
+            
+            def do_OPTIONS(self):
+                """Handle CORS preflight requests"""
+                self.send_response(200)
+                self.end_headers()
         
         with socketserver.TCPServer(("", port), CORSRequestHandler) as httpd:
             server_url = f"http://localhost:{port}"

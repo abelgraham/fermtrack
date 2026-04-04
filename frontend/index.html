@@ -21,7 +21,22 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FermTrack App</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Security Headers -->
+  <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains; preload" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  
+  <!-- Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; connect-src 'self' https://*.fermtrack.com wss://*.fermtrack.com; img-src 'self' data: https:; object-src 'none'; base-uri 'self'; form-action 'self';" />
+  
+  <!-- Disable Cloudflare features that cause issues -->
+  <meta name="cf-2fa-verify" content="false" />
+  <meta name="cf-ray" content="false" />
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     * {
       box-sizing: border-box;
@@ -1307,6 +1322,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         document.getElementById('userDisplay').textContent = `${currentUser.username} (${role})`;
       }
     };
+
+    // HTTPS Redirect for production
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      console.log('Redirecting to HTTPS...');
+      location.replace('https:' + window.location.href.substring(window.location.protocol.length));
+      return;
+    }
 
     // Initialize app
     document.addEventListener('DOMContentLoaded', () => {
