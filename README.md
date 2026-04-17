@@ -60,7 +60,7 @@ bootstrap.sh      Start both services
 | Layer | Technology |
 |-------|------------|
 | Backend | Python 3, Flask 3.0, SQLAlchemy, Marshmallow |
-| Auth | JWT (flask-jwt-extended), bcrypt |
+| Auth | JWT (flask-jwt-extended), scrypt (werkzeug) |
 | Database | SQLite (dev), PostgreSQL (prod) |
 | Frontend | Vanilla HTML, CSS, JavaScript -- no framework |
 | Sensors | ESP32, PlatformIO, Arduino libraries |
