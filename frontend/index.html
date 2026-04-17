@@ -482,13 +482,71 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       }
     }
 
-    /* Admin Panel Styles */
-    .admin-panel {
-      background: #181818;
-      border: 2px solid #d6b25e;
-      border-radius: 12px;
-      padding: 24px;
-      margin-top: 20px;
+    /* Desktop Admin Panel Styles */
+    @media (min-width: 769px) {
+      .admin-panel {
+        max-width: 85vw;
+        width: 85vw;
+        margin: 20px auto;
+        max-height: 80vh;
+        height: auto;
+        min-height: 400px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: #181818;
+        border: 2px solid #d6b25e;
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        z-index: 100;
+      }
+      
+      .admin-tabs {
+        flex-shrink: 0;
+        margin-bottom: 15px;
+      }
+      
+      .admin-table-container {
+        flex: 1;
+        overflow: auto;
+        max-height: 60vh;
+        height: auto;
+      }
+      
+      .admin-table {
+        min-width: 700px;
+        width: 100%;
+      }
+    }
+
+    /* Mobile Admin Panel Styles */
+    @media (max-width: 768px) {
+      .admin-panel {
+        background: #181818;
+        border: 2px solid #d6b25e;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 10px;
+        max-width: calc(100vw - 40px);
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        z-index: 100;
+      }
+      
+      .admin-table-container {
+        overflow: auto;
+        max-height: 70vh;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .admin-table {
+        min-width: 500px;
+        font-size: 14px;
+      }
     }
 
     .admin-tabs {
@@ -496,6 +554,19 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       border-bottom: 1px solid #2d2d2d;
       margin-bottom: 20px;
       flex-wrap: wrap;
+    }
+
+    /* Ensure admin panel doesn't interfere with page layout */
+    body.admin-open {
+      overflow-y: auto;
+    }
+    
+    .admin-panel {
+      box-sizing: border-box;
+    }
+    
+    .admin-panel * {
+      box-sizing: border-box;
     }
 
     .admin-tab {
@@ -516,6 +587,94 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     .admin-tab.active {
       color: #d6b25e;
       border-bottom-color: #d6b25e;
+    }
+    
+    /* Admin Table Styles */
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      color: #e0e0e0;
+    }
+    
+    .admin-table th,
+    .admin-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #2d2d2d;
+    }
+    
+    .admin-table th {
+      background: #222;
+      color: #d6b25e;
+      font-weight: 600;
+    }
+    
+    .admin-table tr:hover {
+      background: #222;
+    }
+    
+    /* Status Badge Styles */
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .status-badge.active {
+      background: #28a745;
+      color: white;
+    }
+    
+    .status-badge.inactive {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .status-badge.pending {
+      background: #ffc107;
+      color: #000;
+    }
+    
+    .status-badge.approved {
+      background: #28a745;
+      color: white;
+    }
+    
+    .status-badge.rejected {
+      background: #dc3545;
+      color: white;
+    }
+    
+    /* Role Badge Styles */
+    .role-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    
+    .role-badge.admin {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .role-badge.manager {
+      background: #ffc107;
+      color: #000;
+    }
+    
+    .role-badge.baker {
+      background: #17a2b8;
+      color: white;
+    }
+    
+    .admin-empty {
+      text-align: center;
+      color: #888;
+      font-style: italic;
+      padding: 20px;
     }
 
     .admin-section {
@@ -1221,6 +1380,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     let availableBakeries = [];
     let batches = [];
     let currentBatchId = null;
+    
+    // Make variables accessible to admin.js
+    window.authToken = authToken;
+    window.currentUser = currentUser;
+    window.currentBakery = currentBakery;
 
     // API Configuration - Dynamic backend URL detection
     const getBackendUrl = () => {
@@ -1286,8 +1450,44 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
     // Helper function to get headers with bakery context
     const getAuthHeaders = (includeBakery = true) => {
-      console.log('getAuthHeaders called:', { includeBakery, currentBakery, authToken: !!authToken });
-      const headers = { 'Authorization': `Bearer ${authToken}` };
+      // First check if we're in a logged-out state
+      if (!window.isAppInitialized && !window.currentUser && !window.authToken) {
+        console.warn('getAuthHeaders: App appears to be logged out, rejecting call');
+        throw new Error('User session ended. Please log in again.');
+      }
+      
+      // Get current token - check both window and localStorage as fallback with validation
+      const windowToken = window.authToken;
+      const storedToken = localStorage.getItem('fermtrack_token');
+      
+      // Validate that the stored token is actually a valid string (not null, undefined, or empty)
+      const validStoredToken = storedToken && storedToken.trim() && storedToken !== 'null' && storedToken !== 'undefined' && storedToken !== '' ? storedToken : null;
+      
+      const currentToken = windowToken || validStoredToken;
+      
+      console.log('getAuthHeaders DEBUG:', { 
+        includeBakery, 
+        currentBakery, 
+        windowAuthToken: !!windowToken,
+        rawLocalStorageToken: !!storedToken,
+        validLocalStorageToken: !!validStoredToken,
+        finalToken: !!currentToken,
+        isAppInitialized: !!window.isAppInitialized,
+        hasCurrentUser: !!window.currentUser
+      });
+      
+      if (!currentToken) {
+        console.error('No valid token available for API call');
+        throw new Error('Authentication required');
+      }
+      
+      // Also check if user is still valid (additional safety check)
+      if (!window.currentUser) {
+        console.error('No current user available for API call');
+        throw new Error('User authentication expired');
+      }
+      
+      const headers = { 'Authorization': `Bearer ${currentToken}` };
       if (includeBakery && currentBakery) {
         headers['X-Bakery-Slug'] = currentBakery;
         console.log('Added bakery header:', currentBakery);
@@ -1545,14 +1745,39 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
     async function validateToken() {
       console.log('Validating token...');
+      
+      const storedToken = localStorage.getItem('fermtrack_token');
+      if (!storedToken || storedToken === 'null') {
+        console.log('No valid token found in localStorage');
+        // Clear any stale state
+        window.authToken = null;
+        window.currentUser = null;
+        window.currentBakery = null;
+        isAppInitialized = true;
+        window.isAppInitialized = true;
+        showAuth();
+        return;
+      }
+      
       try {
         const response = await fetch(`${API_BASE}/auth/me`, {
-          headers: getAuthHeaders(false) // Don't need bakery context for /me
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${storedToken}`,
+            'Content-Type': 'application/json'
+          }
         });
         
         if (response.ok) {
           const data = await response.json();
+          
+          // Token is valid - update all state
+          window.authToken = storedToken;
           currentUser = data.user;
+          window.currentUser = currentUser;
+          
+          console.log('Token validation successful for user:', currentUser.username, 'is_global_admin:', currentUser.is_global_admin);
+          
           updateUserDisplay();
           
           // Load default bakery if not set
@@ -1562,14 +1787,67 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           }
           
           updateBakerySelectors(); // Update bakery selector after login
+          
+          // Mark app as fully initialized
+          isAppInitialized = true;
+          window.isAppInitialized = true;
+          console.log('App initialization complete');
+          
+          // Re-enable admin tabs if user is global admin
+          if (window.currentUser && window.currentUser.is_global_admin) {
+            if (typeof enableAdminTabs === 'function') {
+              enableAdminTabs();
+            } else {
+              // Fallback if admin.js not loaded
+              const adminTabs = document.querySelectorAll('.admin-tab');
+              adminTabs.forEach(tab => {
+                tab.disabled = false;
+                tab.style.pointerEvents = 'auto';
+              });
+            }
+          }
+          
           showApp();
         } else {
+          console.warn('Token validation failed - response not ok:', response.status);
+          // Token is invalid or expired - clear everything immediately
           localStorage.removeItem('fermtrack_token');
+          localStorage.removeItem('fermtrack_current_bakery');
+          window.authToken = null;
           authToken = null;
+          window.currentUser = null;
+          currentUser = null;
+          window.currentBakery = null;
+          currentBakery = null;
+          
+          // Disable admin tabs on auth failure
+          if (typeof disableAdminTabs === 'function') {
+            disableAdminTabs();
+          }
+          
+          isAppInitialized = true;
+          window.isAppInitialized = true;
           showAuth();
         }
       } catch (error) {
-        console.error('Token validation failed:', error);
+        console.error('Token validation network error:', error);
+        // Clear authentication state on any error
+        localStorage.removeItem('fermtrack_token');
+        localStorage.removeItem('fermtrack_current_bakery');
+        window.authToken = null;
+        authToken = null;
+        window.currentUser = null;
+        currentUser = null;
+        window.currentBakery = null;
+        currentBakery = null;
+        
+        // Disable admin tabs on error
+        if (typeof disableAdminTabs === 'function') {
+          disableAdminTabs();
+        }
+        
+        isAppInitialized = true;
+        window.isAppInitialized = true;
         showAuth();
       }
     }
@@ -1595,11 +1873,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
         if (response.ok) {
           authToken = data.access_token;
+          window.authToken = authToken;
           localStorage.setItem('fermtrack_token', authToken);
           currentUser = data.user;
+          window.currentUser = currentUser;
           
           // Set bakery context after successful login
           currentBakery = bakerySlug;
+          window.currentBakery = currentBakery;
           localStorage.setItem('fermtrack_current_bakery', currentBakery);
           console.log('Login successful, bakery set to:', currentBakery);
           
@@ -1664,12 +1945,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
         if (response.ok) {
           authToken = data.access_token;
+          window.authToken = authToken;
           localStorage.setItem('fermtrack_token', authToken);
           currentUser = data.user;
+          window.currentUser = currentUser;
           
           if (bakerySlug) {
             // User registered with a bakery - proceed to app
             currentBakery = bakerySlug;
+            window.currentBakery = currentBakery;
             localStorage.setItem('fermtrack_current_bakery', currentBakery);
             
             updateUserDisplay();
@@ -1697,14 +1981,90 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     }
 
     function logout() {
-      localStorage.removeItem('fermtrack_token');
-      localStorage.removeItem('fermtrack_current_bakery');
+      console.log('Logging out user');
+      
+      // Clear localStorage thoroughly and immediately with validation
+      const keysToRemove = ['fermtrack_token', 'fermtrack_current_bakery'];
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        // Force clear if still exists
+        if (localStorage.getItem(key)) {
+          localStorage.setItem(key, '');
+          localStorage.removeItem(key);
+        }
+        console.log(`Cleared localStorage key: ${key}`);
+      });
+      
+      // Verify localStorage is cleared
+      console.log('Post-logout localStorage check:', {
+        token: localStorage.getItem('fermtrack_token'),
+        bakery: localStorage.getItem('fermtrack_current_bakery')
+      });
+      
+      // Clear all authentication state IMMEDIATELY
       authToken = null;
+      window.authToken = null;
       currentUser = null;
+      window.currentUser = null;
       currentBakery = null;
-      document.getElementById('loginUsername').value = '';
-      document.getElementById('loginPassword').value = '';
-      document.getElementById('loginBakery').value = '';
+      window.currentBakery = null;
+      
+      // Reset initialization state to prevent admin functions from running
+      isAppInitialized = false;
+      window.isAppInitialized = false;
+      
+      // Hide and disable admin panel completely
+      const adminPanel = document.getElementById('adminPanel');
+      if (adminPanel) {
+        adminPanel.classList.add('hidden');
+        adminPanel.style.display = 'none'; // Extra protection
+        
+        // Use admin.js function if available, otherwise fallback to manual cleanup
+        if (typeof disableAdminTabs === 'function') {
+          disableAdminTabs();
+        } else {
+          // Manual fallback
+          // Clear all admin content and disable tabs
+          const sections = ['adminUsers', 'adminBakeries', 'adminBatches', 'adminRoles', 'adminApplications', 'adminVerification'];
+          sections.forEach(sectionId => {
+            const element = document.getElementById(sectionId);
+            if (element) {
+              element.classList.add('hidden');
+              element.innerHTML = ''; // Clear content
+            }
+          });
+          
+          // Disable all admin tab buttons and remove event listeners
+          const adminTabs = document.querySelectorAll('.admin-tab, #adminTabs button, .admin-nav button');
+          adminTabs.forEach(tab => {
+            tab.disabled = true;
+            tab.style.pointerEvents = 'none';
+            tab.style.opacity = '0.5';
+            tab.classList.remove('active');
+            // Remove any onclick handlers
+            tab.onclick = null;
+            tab.removeAttribute('onclick');
+          });
+        }
+      }
+      
+      // Also hide any admin login modals that might be open
+      const adminLoginModal = document.getElementById('adminLoginModal');
+      if (adminLoginModal) {
+        adminLoginModal.style.display = 'none';
+        adminLoginModal.classList.add('hidden');
+      }
+      
+      // Clear form fields
+      const loginUsername = document.getElementById('loginUsername');
+      const loginPassword = document.getElementById('loginPassword');
+      const loginBakery = document.getElementById('loginBakery');
+      
+      if (loginUsername) loginUsername.value = '';
+      if (loginPassword) loginPassword.value = '';
+      if (loginBakery) loginBakery.value = '';
+      
+      console.log('Logout complete - all tokens cleared and admin panel disabled');
       showAuth();
       showAlert('Logged out successfully', 'success');
     }
@@ -2286,13 +2646,21 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
     // Check if current user is admin and show/hide admin panel
     function checkAdminAccess() {
-      const userRole = getCurrentUserRole();
       const adminPanel = document.getElementById('adminPanel');
       
-      if (userRole === 'admin') {
+      console.log('checkAdminAccess called:', {
+        currentUser: !!window.currentUser,
+        isGlobalAdmin: window.currentUser?.is_global_admin,
+        isAppInitialized: window.isAppInitialized
+      });
+      
+      // Only show admin panel for global admins, and only if app is initialized
+      if (window.currentUser && window.currentUser.is_global_admin && window.isAppInitialized) {
+        console.log('Showing admin panel for global admin');
         adminPanel.classList.remove('hidden');
         // Admin data will be loaded on-demand when admin tabs are clicked
       } else {
+        console.log('Hiding admin panel - not authorized or not initialized');
         adminPanel.classList.add('hidden');
       }
     }
@@ -2303,7 +2671,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
     // Helper function for admin API calls (used by admin.js)
     async function api(endpoint, method = 'GET', body = null) {
-      const url = endpoint.startsWith('/api') ? API_BASE + endpoint.substring(4) : API_BASE + endpoint;
+      const url = endpoint.startsWith('/api') ? API_BASE.replace('/api', '') + endpoint : API_BASE + endpoint;
       const options = {
         method,
         headers: getAuthHeaders(false) // Admin endpoints don't need bakery context

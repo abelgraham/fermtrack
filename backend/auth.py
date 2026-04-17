@@ -447,26 +447,91 @@ def require_admin():
         return decorated_function
     return decorator
 
-@auth_bp.route('/admin/users', methods=['GET'])
+@auth_bp.route('/admin/users', methods=['GET', 'POST'])
 @require_admin()
-def admin_get_users():
-    """Get all users for admin management"""
-    try:
-        users = User.query.all()
-        users_data = []
-        
-        for user in users:
-            users_data.append({
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'is_active': user.is_active,
-                'created_at': user.created_at.isoformat() if user.created_at else None
-            })
+def admin_users():
+    """Handle admin user operations"""
+    
+    if request.method == 'GET':
+        """Get all users for admin management"""
+        try:
+            users = User.query.all()
+            users_data = []
             
-        return jsonify({'users': users_data}), 200
-    except Exception as e:
-        return jsonify({'error': 'Failed to fetch users', 'details': str(e)}), 500
+            for user in users:
+                users_data.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_active': user.is_active,
+                    'created_at': user.created_at.isoformat() if user.created_at else None
+                })
+                
+            return jsonify({'users': users_data}), 200
+        except Exception as e:
+            return jsonify({'error': 'Failed to fetch users', 'details': str(e)}), 500
+    
+    elif request.method == 'POST':
+        """Create a new user (admin only)"""
+        try:
+            data = request.get_json()
+            if data is None:
+                return jsonify({'error': 'Invalid JSON data provided'}), 400
+                
+            # Validate required fields
+            required_fields = ['username', 'email', 'password']
+            for field in required_fields:
+                if field not in data or not data[field]:
+                    return jsonify({'error': f'Missing required field: {field}'}), 400
+            
+            # Clean up username
+            username = data['username'].strip()
+            email = data['email'].strip()
+            
+            # Check if username or email already exists
+            existing_user = User.query.filter(
+                (User.username == username) | (User.email == email)
+            ).first()
+            
+            if existing_user:
+                if existing_user.username == username:
+                    return jsonify({'error': 'Username already exists'}), 409
+                else:
+                    return jsonify({'error': 'Email already exists'}), 409
+            
+            # Create new user
+            user = User(
+                username=username,
+                email=email,
+                is_active=data.get('is_active', True)  # Default to active
+            )
+            user.set_password(data['password'])
+            
+            db.session.add(user)
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'User created successfully',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_active': user.is_active,
+                    'created_at': user.created_at.isoformat() if user.created_at else None
+                }
+            }), 201
+            
+        except Exception as e:
+            db.session.rollback()
+            error_msg = str(e)
+            
+            # Check for specific database constraint violations
+            if 'UNIQUE constraint failed: users.username' in error_msg:
+                return jsonify({'error': 'Username already exists'}), 409
+            elif 'UNIQUE constraint failed: users.email' in error_msg:
+                return jsonify({'error': 'Email already exists'}), 409
+            else:
+                return jsonify({'error': 'Failed to create user', 'details': error_msg}), 500
 
 @auth_bp.route('/admin/users/<user_id>', methods=['PUT'])
 @require_admin()
@@ -618,7 +683,8 @@ def admin_get_batches():
             
             batches_data.append({
                 'id': batch.id,
-                'name': batch.name,
+                'batch_id': batch.batch_id,  # Human-readable ID
+                'recipe_name': batch.recipe_name,  # Use recipe_name instead of name
                 'status': batch.status,
                 'bakery_id': batch.bakery_id,
                 'bakery_name': bakery.name if bakery else 'Unknown',
@@ -816,23 +882,27 @@ def apply_to_bakery():
 def admin_get_applications():
     """Get bakery applications for admin review"""
     try:
-        # Get current admin user's bakery contexts
-        current_user = get_jwt_identity()
-        user = User.query.filter_by(username=current_user).first()
+        # Get current admin user
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
         
-        # Get bakeries this admin manages
-        admin_bakeries = UserBakery.query.filter_by(
-            user_id=user.id,
-            role='admin',
-            is_active=True
-        ).all()
-        
-        bakery_ids = [ub.bakery_id for ub in admin_bakeries]
-        
-        # Get applications for those bakeries
-        applications = UserBakeryApplication.query.filter(
-            UserBakeryApplication.bakery_id.in_(bakery_ids)
-        ).order_by(UserBakeryApplication.created_at.desc()).all()
+        if user.is_global_admin:
+            # Global admins can see all applications
+            applications = UserBakeryApplication.query.order_by(
+                UserBakeryApplication.created_at.desc()
+            ).all()
+        else:
+            # Regular admins only see applications for bakeries they manage
+            admin_bakeries = UserBakery.query.filter_by(
+                user_id=user.id,
+                role='admin',
+                is_active=True
+            ).all()
+            
+            bakery_ids = [ub.bakery_id for ub in admin_bakeries]
+            applications = UserBakeryApplication.query.filter(
+                UserBakeryApplication.bakery_id.in_(bakery_ids)
+            ).order_by(UserBakeryApplication.created_at.desc()).all()
         
         return jsonify({
             'applications': [app.to_dict() for app in applications]
@@ -900,5 +970,41 @@ def admin_review_application(application_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Failed to review application', 'details': str(e)}), 500
-    
-    return jsonify({'bakeries': bakeries_data}), 200
+
+@auth_bp.route('/admin/verification', methods=['GET'])
+@require_admin()
+def admin_get_verification():
+    """Get bakery verification data for admin management"""
+    try:
+        # Get current admin user
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if user.is_global_admin:
+            # Global admins can see all bakeries
+            bakeries = Bakery.query.all()
+        else:
+            # Regular admins only see bakeries they manage
+            admin_bakeries = UserBakery.query.filter_by(
+                user_id=user.id,
+                role='admin',
+                is_active=True
+            ).all()
+            bakery_ids = [ub.bakery_id for ub in admin_bakeries]
+            bakeries = Bakery.query.filter(Bakery.id.in_(bakery_ids)).all()
+        
+        verification_data = []
+        for bakery in bakeries:
+            verification_data.append({
+                'id': bakery.id,
+                'name': bakery.name,
+                'slug': bakery.slug,
+                'is_verified': getattr(bakery, 'is_verified', True),  # Default to verified if no field
+                'is_active': bakery.is_active,
+                'created_at': bakery.created_at.isoformat() if bakery.created_at else None,
+                'description': bakery.description
+            })
+        
+        return jsonify({'verifications': verification_data}), 200
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch verification data', 'details': str(e)}), 500

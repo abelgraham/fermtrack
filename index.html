@@ -21,6 +21,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FermTrack</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     * {
       box-sizing: border-box;
@@ -29,10 +30,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     }
 
     body {
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #121212;
       color: #f5f5f5;
       line-height: 1.6;
+      min-height: 100vh;
     }
 
     a {
@@ -41,14 +43,65 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     }
 
     .container {
-      width: min(1100px, 92%);
+      width: min(1200px, 95%);
       margin: 0 auto;
+      padding: 20px;
     }
 
-    .hero {
-      padding: 96px 0 72px;
+    /* Header */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
       border-bottom: 1px solid #2c2c2c;
-      background: linear-gradient(180deg, #181818 0%, #121212 100%);
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #d6b25e;
+    }
+
+    .top-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .top-links a {
+      color: #bbb;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .top-links a:hover {
+      color: #d6b25e;
+    }
+
+    .github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #f5f5f5;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: 0.2s ease;
+    }
+
+    .github-btn:hover {
+      border-color: #d6b25e;
+      color: #d6b25e;
+      background: rgba(214, 178, 94, 0.08);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 80px 0 64px;
+      border-bottom: 1px solid #2c2c2c;
     }
 
     .eyebrow {
@@ -81,30 +134,35 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       margin-bottom: 28px;
     }
 
-    .button {
+    .btn {
       display: inline-block;
-      padding: 14px 22px;
-      border-radius: 10px;
-      font-weight: bold;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
       transition: 0.2s ease;
+      font-size: 0.95rem;
     }
 
-    .button.primary {
+    .btn-primary {
       background: #d6b25e;
       color: #121212;
     }
 
-    .button.primary:hover {
-      transform: translateY(-1px);
+    .btn-primary:hover {
       background: #e3c16f;
+      transform: translateY(-1px);
     }
 
-    .button.secondary {
+    .btn-secondary {
       border: 1px solid #444;
       color: #f5f5f5;
+      background: transparent;
     }
 
-    .button.secondary:hover {
+    .btn-secondary:hover {
       border-color: #777;
       background: #1a1a1a;
     }
@@ -119,6 +177,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       font-size: 0.95rem;
     }
 
+    /* Sections */
     .section {
       padding: 72px 0;
     }
@@ -145,6 +204,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       border: 1px solid #2d2d2d;
       border-radius: 16px;
       padding: 24px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: #d6b25e44;
     }
 
     .card-number {
@@ -203,48 +267,146 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       color: #bdbdbd;
     }
 
+    /* Tech stack section */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .tech-card {
+      background: #181818;
+      border: 1px solid #2d2d2d;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .tech-card i {
+      font-size: 1.8rem;
+      color: #d6b25e;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .tech-card h4 {
+      margin-bottom: 6px;
+      font-size: 1rem;
+    }
+
+    .tech-card p {
+      color: #999;
+      font-size: 0.85rem;
+    }
+
+    /* Footer */
     .footer {
-      padding: 28px 0 42px;
+      padding: 28px 0 20px;
       border-top: 1px solid #2c2c2c;
       color: #9d9d9d;
       font-size: 0.95rem;
     }
 
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer a {
+      color: #d6b25e;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* AGPL notice */
+    .agpl-notice {
+      background: #0a0a0a;
+      border-top: 1px solid #2d2d2d;
+      padding: 20px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    .agpl-notice a {
+      color: #d6b25e;
+    }
+
+    .agpl-notice a:hover {
+      text-decoration: underline;
+    }
+
     @media (max-width: 800px) {
       .grid,
-      .two-column {
+      .two-column,
+      .tech-grid {
         grid-template-columns: 1fr;
       }
 
       .hero {
-        padding-top: 72px;
+        padding-top: 56px;
+      }
+
+      .top-bar {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .footer-row {
+        flex-direction: column;
+        text-align: center;
       }
     }
   </style>
 </head>
 <body>
+  <!-- Top Bar -->
+  <div class="container">
+    <div class="top-bar">
+      <div class="logo"><i class="fas fa-flask"></i> FermTrack</div>
+      <div class="top-links">
+        <a href="#features">Features</a>
+        <a href="#stack">Stack</a>
+        <a href="#vision">Vision</a>
+        <a class="github-btn" href="https://github.com/abelgraham/fermtrack" target="_blank" rel="noopener noreferrer">
+          <i class="fab fa-github"></i> View on GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero -->
   <section class="hero">
     <div class="container">
-      <div class="eyebrow">FermTrack</div>
-      <h1>A smarter way to track dough, fermentation, and prep workflow.</h1>
+      <div class="eyebrow">Open Source &middot; AGPL-3.0</div>
+      <h1>Track dough, fermentation, and prep workflow — from mix to oven.</h1>
       <p>
-        FermTrack is a kitchen system for tracking dough batches, fermentation stages,
-        and corrective actions without relying on paper logs or memory.
+        FermTrack is a multi-tenant kitchen system for tracking dough batches, fermentation stages,
+        and corrective actions. Built for bakeries that want consistency without paper logs.
       </p>
       <div class="button-row">
-        <a class="button primary" href="https://fermtrack.com/demo" target="_blank">Open Live Demo</a>
-        <a class="button secondary" href="#features">See Features</a>
-        <a class="button secondary" href="#vision">Future Vision</a>
+        <a class="btn btn-primary" href="https://fermtrack.com/demo" target="_blank">Open Live Demo</a>
+        <a class="btn btn-secondary" href="#features">See Features</a>
+        <a class="btn btn-secondary" href="https://github.com/abelgraham/fermtrack" target="_blank" rel="noopener noreferrer">
+          <i class="fab fa-github"></i>&nbsp; Source Code
+        </a>
       </div>
       <div class="status-note">
-        Early demo build. Everything currently saves locally and may be prone to breakage while development continues.
+        <i class="fas fa-code-branch" style="color: #d6b25e;"></i>&nbsp;
+        Active development. Multi-tenant auth, admin panel, and ESP32 sensor integration available. Self-hostable.
       </div>
     </div>
   </section>
 
+  <!-- Features -->
   <section class="section" id="features">
     <div class="container">
-      <h2>What FermTrack is built to do</h2>
+      <h2>What FermTrack does</h2>
       <p class="section-intro">
         Built around a pretzel and laugenbrezel workflow, but designed for any fermentation-heavy kitchen that needs clarity, consistency, and traceability.
       </p>
@@ -252,40 +414,68 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         <div class="card">
           <div class="card-number">01</div>
           <h3>Track every batch</h3>
-          <p>Log batch ID, weight, time, and status so your production never disappears into guesswork.</p>
+          <p>Log batch ID, weight, time, and status so production never disappears into guesswork.</p>
         </div>
         <div class="card">
           <div class="card-number">02</div>
+          <h3>Multi-tenant bakery management</h3>
+          <p>Each bakery gets its own isolated workspace with role-based access for bakers, managers, and admins.</p>
+        </div>
+        <div class="card">
+          <div class="card-number">03</div>
           <h3>Standardize workflow</h3>
           <p>Document fortifying, re-balling, degassing, washing, and other key actions in one system.</p>
         </div>
         <div class="card">
-          <div class="card-number">03</div>
-          <h3>Reduce inconsistency</h3>
-          <p>Keep fermentation steady day to day and catch problems before they become product loss.</p>
-        </div>
-        <div class="card">
           <div class="card-number">04</div>
-          <h3>Build for expansion</h3>
-          <p>Designed with future sensor integration in mind, including ESP32-based CO2, temperature, and humidity monitoring.</p>
+          <h3>ESP32 sensor integration</h3>
+          <p>Connect CO2, temperature, and humidity sensors for real-time fermentation monitoring with hardware you own.</p>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- Tech Stack -->
+  <section class="section" id="stack">
+    <div class="container">
+      <h2>Built with</h2>
+      <p class="section-intro">
+        A straightforward stack designed to be self-hostable on a single machine or deployed to the cloud.
+      </p>
+      <div class="tech-grid">
+        <div class="tech-card">
+          <i class="fab fa-python"></i>
+          <h4>Flask Backend</h4>
+          <p>Python REST API with JWT auth and SQLite</p>
+        </div>
+        <div class="tech-card">
+          <i class="fab fa-js-square"></i>
+          <h4>Vanilla Frontend</h4>
+          <p>No framework — plain HTML, CSS, and JavaScript</p>
+        </div>
+        <div class="tech-card">
+          <i class="fas fa-microchip"></i>
+          <h4>ESP32 Sensors</h4>
+          <p>PlatformIO-based firmware for environmental monitoring</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it fits -->
   <section class="section">
     <div class="container two-column">
       <div>
         <h2>How it fits the kitchen</h2>
         <p class="section-intro">
-          FermTrack is not just a recipe companion. It is meant to support a more systematic kitchen by making fermentation and prep visible across the whole process.
+          FermTrack is not just a recipe companion. It supports a more systematic kitchen by making fermentation and prep visible across the whole process.
         </p>
         <div class="list-box">
           <ul>
-            <li>Create and label batches clearly</li>
-            <li>Track fermentation stages across the day</li>
-            <li>Record what needs to be fortified, re-balled, degassed, or washed</li>
-            <li>Keep production decisions visible instead of locked in someone's head</li>
+            <li><i class="fas fa-tag" style="color: #d6b25e;"></i>&nbsp; Create and label batches clearly</li>
+            <li><i class="fas fa-clock" style="color: #d6b25e;"></i>&nbsp; Track fermentation stages across the day</li>
+            <li><i class="fas fa-clipboard-list" style="color: #d6b25e;"></i>&nbsp; Record what needs to be fortified, re-balled, degassed, or washed</li>
+            <li><i class="fas fa-eye" style="color: #d6b25e;"></i>&nbsp; Keep production decisions visible instead of locked in someone's head</li>
           </ul>
         </div>
       </div>
@@ -294,16 +484,41 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
           "Built for cooks and bakers who want consistency without turning the kitchen into paperwork."
         </p>
         <p class="muted">
-          Long term, FermTrack can grow beyond batch logging into environmental tracking and hardware-assisted fermentation monitoring.
+          Long term, FermTrack can grow beyond batch logging into environmental tracking, automated alerts, and hardware-assisted fermentation monitoring — all self-hosted and open source.
         </p>
       </div>
     </div>
   </section>
 
+  <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      FermTrack — fermentation tracking for real kitchen workflow.
+      <div class="footer-row">
+        <span>FermTrack &mdash; fermentation tracking for real kitchen workflow.</span>
+        <span>
+          <a href="https://github.com/abelgraham/fermtrack" target="_blank" rel="noopener noreferrer">
+            <i class="fab fa-github"></i> GitHub
+          </a>
+        </span>
+      </div>
     </div>
   </footer>
+
+  <!-- AGPL3 Source Code Availability Notice -->
+  <div class="agpl-notice">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <p style="margin-bottom: 8px;">
+        <strong>FermTrack</strong> is free software licensed under the
+        <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer">GNU Affero General Public License v3.0</a>
+      </p>
+      <p style="margin-bottom: 8px;">
+        Complete source code:
+        <strong><a href="https://github.com/abelgraham/fermtrack" target="_blank" rel="noopener noreferrer">github.com/abelgraham/fermtrack</a></strong>
+      </p>
+      <p style="margin: 0; font-size: 0.8rem;">
+        You have the right to obtain, modify, and redistribute this software under the terms of the AGPL-3.0.
+      </p>
+    </div>
+  </div>
 </body>
 </html>
