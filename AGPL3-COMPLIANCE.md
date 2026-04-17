@@ -11,13 +11,16 @@
 - [x] NOTICE file with copyright and source availability
 
 #### 2. Source Code Headers
-- [x] Backend Python files (`app.py`, `models.py`, `auth.py`, `batches.py`, `config.py`)
-- [x] Utility files (`test_api.py`, `init.py`, `serve.py`)
+- [x] Backend Python files (`app.py`, `models.py`, `auth.py`, `batches.py`, `config.py`, `middleware.py`)
+- [x] Migration scripts (`add_applications_table.py`, `add_credit_system.py`, `add_global_admin.py`, `add_verification_columns.py`)
+- [x] Test and utility files (`test_api.py`, `test_credit_api.py`, `test_credit_raw.py`, `test_credit_system.py`, `test_db_schema.py`, `setup_test_user.py`, `init.py`, `serve.py`)
 - [x] Frontend HTML files (`index.html`, landing page, demo)
+- [x] Frontend JavaScript files (`admin.js`)
 - [x] ESP32 C++ files (`main.cpp`, `config.h`, `sensor-test.cpp`)
 
 #### 3. Source Code Availability (Network Copyleft)
 - [x] Footer in web interface with source code link
+- [x] Demo page includes visible AGPL notice with source link
 - [x] API endpoint `/api` includes license and source info
 - [x] README documents source code location
 - [x] Clear notice about AGPL3 network copyleft requirements
