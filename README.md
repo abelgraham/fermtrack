@@ -1,96 +1,107 @@
 # FermTrack
 
-A comprehensive fermentation tracking system for bakeries and kitchens. FermTrack helps you monitor dough batches, track fermentation stages, and maintain consistency in your baking workflow.
+Track dough batches, fermentation stages, and prep workflow -- from mix to oven.
 
-## 🏗️ Project Structure
+FermTrack is a multi-tenant kitchen system built for bakeries that want consistency without paper logs. It started around a pretzel and laugenbrezel workflow but is designed for any fermentation-heavy kitchen.
 
-- **[backend/](backend/)** - Python Flask API with JWT authentication and SQLite database
-- **[frontend/](frontend/)** - Single-page web application for batch management  
-- **[index.html](index.html)** - Original landing page
-- **[demo/](demo/)** - Demo resources
+**Live demo:** [fermtrack.com/demo](https://fermtrack.com/demo)
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. Start the Backend API
+The fastest way to run everything locally:
 
 ```bash
+./bootstrap.sh
+```
+
+This starts both the backend API (port 5000) and frontend server (port 8080). Open `http://localhost:8080` in your browser.
+
+Default admin login: `admin` / `admin123`
+
+### Manual Setup
+
+If you prefer to start services individually:
+
+```bash
+# Backend
 cd backend
-./setup.sh          # One-time setup
-source venv/bin/activate
-python app.py        # Start API server
+./setup.sh
+source ../.venv/bin/activate
+python app.py
+
+# Frontend (separate terminal)
+cd frontend
+./start.sh
 ```
 
-Backend runs at `http://localhost:5000`
+## Project Structure
 
-### 2. Start the Frontend
-
-```bash
-cd frontend  
-./start.sh           # Start frontend server
+```
+backend/          Flask REST API, JWT auth, SQLite
+frontend/         Single-page app (vanilla HTML/CSS/JS)
+demo/             Standalone local-storage demo
+esp32-integration/ PlatformIO firmware for sensor hardware
+index.html        Landing page (fermtrack.com root)
+bootstrap.sh      Start both services
 ```
 
-Frontend runs at `http://localhost:8080`
+## Features
 
-### 3. Access the Application
+- **Multi-tenant bakeries** -- each bakery gets an isolated workspace with role-based access (baker, manager, admin)
+- **Batch tracking** -- log batch ID, weight, dough type, time mixed, and status
+- **Action logging** -- record fortify, re-ball, degas, wash, and other corrective actions
+- **Global admin panel** -- manage users, bakeries, roles, and verification from one place
+- **ESP32 sensor integration** -- connect CO2, temperature, and humidity sensors for real-time monitoring
+- **CSV export** -- export filtered batch data
+- **Self-hostable** -- runs on a single machine with SQLite, no external services required
 
-- Open `http://localhost:8080` in your browser
-- Login with default admin: `admin` / `admin123`
-- Create batches and start tracking fermentation!
+## Tech Stack
 
-## 📋 Features
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3, Flask 3.0, SQLAlchemy, Marshmallow |
+| Auth | JWT (flask-jwt-extended), bcrypt |
+| Database | SQLite (dev), PostgreSQL (prod) |
+| Frontend | Vanilla HTML, CSS, JavaScript -- no framework |
+| Sensors | ESP32, PlatformIO, Arduino libraries |
+| Deploy | Docker, systemd services, Cloudflare |
 
-- **User Management**: Role-based authentication (baker, manager, admin)
-- **Batch Tracking**: Create and monitor fermentation batches
-- **Action Logging**: Record batch actions (fortify, re-ball, degas, wash, etc.)
-- **Fermentation Stages**: Track timing and environmental conditions
-- **Environmental Monitoring**: Temperature and humidity tracking
-- **RESTful API**: Complete backend API for integration
+## API
 
-## 📖 Documentation
+Backend docs: [backend/README.md](backend/README.md)
 
-- [Backend Documentation](backend/README.md) - API endpoints and setup
-- [Frontend Documentation](frontend/README.md) - Web application usage  
+Key endpoints:
 
-## 🧪 Testing
+```
+POST   /api/auth/login          Login, get JWT
+POST   /api/auth/register       Create account
+GET    /api/batches              List batches (filtered)
+POST   /api/batches              Create batch
+GET    /api/admin/users          Admin: list users
+GET    /api/admin/bakeries       Admin: list bakeries
+```
 
-Test the API functionality:
+## Testing
+
 ```bash
 cd backend
 python test_api.py
 ```
 
-## 📄 License
-
-FermTrack is free software licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
-
-### What this means:
-- ✅ **Free to use** for any purpose
-- ✅ **Free to modify** and customize
-- ✅ **Free to distribute** your modifications
-- ⚠️ **Network copyleft**: If you run FermTrack as a network service, you must provide source code access to users
-
-### Source Code Availability
-As required by AGPL-3.0, the complete source code is available at:
-**https://github.com/abelgraham/fermtrack**
-
-### Third-Party Components
-All dependencies are AGPL-3.0 compatible:
-- Backend: Flask, SQLAlchemy, etc. (MIT/BSD licensed)
-- Frontend: Vanilla JavaScript (no external dependencies)
-- ESP32: Arduino libraries (LGPL/MIT licensed)
-
-See `NOTICE` file for complete licensing information.
-
-## 🐳 Docker Deployment
+## Docker
 
 ```bash
 cd backend
 docker-compose up -d
 ```
 
-## 🔧 Tech Stack
+## License
 
-- **Backend**: Python, Flask, SQLAlchemy, JWT, SQLite
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Authentication**: JWT tokens with role-based access
-- **Database**: SQLite (development), PostgreSQL (production)
+FermTrack is free software licensed under the [GNU Affero General Public License v3.0](https://www.gnu.org/licenses/agpl-3.0.html).
+
+- Free to use, modify, and redistribute
+- Network copyleft: if you run FermTrack as a network service, you must provide source code access to users
+
+Complete source code: **https://github.com/abelgraham/fermtrack**
+
+All dependencies are AGPL-3.0 compatible (Flask, SQLAlchemy, etc. are MIT/BSD; Arduino libraries are LGPL/MIT). See [NOTICE](NOTICE) for details.
