@@ -24,8 +24,8 @@ import os
 
 def check_database_schema():
     """Check if credit system columns exist in the database"""
-    db_path = 'fermtrack.db'
-    
+    db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
+
     if not os.path.exists(db_path):
         print(f"❌ Database file {db_path} not found!")
         return False

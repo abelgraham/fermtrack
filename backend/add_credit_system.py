@@ -29,11 +29,8 @@ def add_credit_columns():
     # Find the database file
     db_path = None
     possible_paths = [
-        'fermtrack.db',
-        '../fermtrack.db',
-        '../instance/fermtrack.db',
-        'instance/fermtrack.db',
-        '/var/lib/fermtrack/fermtrack.db'
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'fermtrack.db'),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fermtrack.db'),
     ]
     
     for path in possible_paths:

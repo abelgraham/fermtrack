@@ -25,8 +25,8 @@ from datetime import datetime, timedelta
 
 def test_credit_system_raw():
     """Test the credit system using raw SQL"""
-    db_path = 'fermtrack.db'
-    
+    db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
+
     if not os.path.exists(db_path):
         print(f"❌ Database file {db_path} not found!")
         return

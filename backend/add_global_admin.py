@@ -91,9 +91,8 @@ def main():
     """Main function to run migrations"""
     # Database paths
     db_paths = [
-        "/home/ag/fermtrack/backend/instance/fermtrack.db",
-        "/home/ag/fermtrack/backend/fermtrack.db", 
-        "/home/ag/fermtrack/instance/fermtrack.db"
+        os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db'),
+        os.path.join(os.path.dirname(__file__), 'fermtrack.db'),
     ]
     
     print("🔧 Migrating databases for global admin support...")
