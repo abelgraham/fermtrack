@@ -34,13 +34,13 @@ def test_health_check():
     try:
         response = requests.get(f'{BASE_URL}/health')
         if response.status_code == 200:
-            print("✅ Health check passed")
+            print("[OK] Health check passed")
             return True
         else:
-            print(f"❌ Health check failed: {response.status_code}")
+            print(f"[ERROR] Health check failed: {response.status_code}")
             return False
     except requests.exceptions.RequestException as e:
-        print(f"❌ Health check failed: Cannot connect to server - {e}")
+        print(f"[ERROR] Health check failed: Cannot connect to server - {e}")
         return False
 
 def test_user_registration_and_login():
@@ -57,7 +57,7 @@ def test_user_registration_and_login():
         # Register user
         response = requests.post(f'{BASE_URL}/auth/register', json=test_user)
         if response.status_code == 201:
-            print("✅ User registration successful")
+            print("[OK] User registration successful")
             data = response.json()
             token = data['access_token']
             
@@ -69,17 +69,17 @@ def test_user_registration_and_login():
             
             response = requests.post(f'{BASE_URL}/auth/login', json=login_data)
             if response.status_code == 200:
-                print("✅ User login successful")
+                print("[OK] User login successful")
                 return token
             else:
-                print(f"❌ User login failed: {response.status_code}")
+                print(f"[ERROR] User login failed: {response.status_code}")
                 return None
         else:
-            print(f"❌ User registration failed: {response.status_code} - {response.text}")
+            print(f"[ERROR] User registration failed: {response.status_code} - {response.text}")
             return None
             
     except requests.exceptions.RequestException as e:
-        print(f"❌ Authentication test failed: {e}")
+        print(f"[ERROR] Authentication test failed: {e}")
         return None
 
 def test_batch_operations(token):
@@ -100,7 +100,7 @@ def test_batch_operations(token):
         # Create batch
         response = requests.post(f'{BASE_URL}/batches', json=batch_data, headers=headers)
         if response.status_code == 201:
-            print("✅ Batch creation successful")
+            print("[OK] Batch creation successful")
             batch = response.json()['batch']
             batch_id = batch['batch_id']
             
@@ -115,7 +115,7 @@ def test_batch_operations(token):
             response = requests.post(f'{BASE_URL}/batches/{batch_id}/actions', 
                                    json=action_data, headers=headers)
             if response.status_code == 201:
-                print("✅ Batch action addition successful")
+                print("[OK] Batch action addition successful")
                 
                 # Add fermentation stage
                 stage_data = {
@@ -128,25 +128,25 @@ def test_batch_operations(token):
                 response = requests.post(f'{BASE_URL}/batches/{batch_id}/fermentation-stages',
                                        json=stage_data, headers=headers)
                 if response.status_code == 201:
-                    print("✅ Fermentation stage addition successful")
+                    print("[OK] Fermentation stage addition successful")
                     
                     # List batches
                     response = requests.get(f'{BASE_URL}/batches', headers=headers)
                     if response.status_code == 200:
                         batches = response.json()['batches']
-                        print(f"✅ Batch listing successful ({len(batches)} batches found)")
+                        print(f"[OK] Batch listing successful ({len(batches)} batches found)")
                         return True
                     else:
-                        print(f"❌ Batch listing failed: {response.status_code}")
+                        print(f"[ERROR] Batch listing failed: {response.status_code}")
                 else:
-                    print(f"❌ Fermentation stage addition failed: {response.status_code}")
+                    print(f"[ERROR] Fermentation stage addition failed: {response.status_code}")
             else:
-                print(f"❌ Batch action addition failed: {response.status_code}")
+                print(f"[ERROR] Batch action addition failed: {response.status_code}")
         else:
-            print(f"❌ Batch creation failed: {response.status_code} - {response.text}")
+            print(f"[ERROR] Batch creation failed: {response.status_code} - {response.text}")
             
     except requests.exceptions.RequestException as e:
-        print(f"❌ Batch operations test failed: {e}")
+        print(f"[ERROR] Batch operations test failed: {e}")
         
     return False
 
@@ -160,24 +160,24 @@ def test_admin_login():
     try:
         response = requests.post(f'{BASE_URL}/auth/login', json=admin_data)
         if response.status_code == 200:
-            print("✅ Default admin login successful")
+            print("[OK] Default admin login successful")
             data = response.json()
             return data['access_token']
         else:
-            print(f"❌ Default admin login failed: {response.status_code}")
+            print(f"[ERROR] Default admin login failed: {response.status_code}")
             return None
     except requests.exceptions.RequestException as e:
-        print(f"❌ Admin login test failed: {e}")
+        print(f"[ERROR] Admin login test failed: {e}")
         return None
 
 def main():
     """Run all tests"""
-    print("🧪 Running FermTrack Backend API Tests")
+    print("[TEST] Running FermTrack Backend API Tests")
     print("="*50)
     
     # Test health check
     if not test_health_check():
-        print("\n❌ Server is not running or not reachable.")
+        print("\n[ERROR] Server is not running or not reachable.")
         print("Please start the server with: python app.py")
         return 1
     
@@ -203,7 +203,7 @@ def main():
     
     print()
     print("="*50)
-    print("🎉 All tests passed! FermTrack API is working correctly.")
+    print("[SUCCESS] All tests passed! FermTrack API is working correctly.")
     print("="*50)
     
     return 0

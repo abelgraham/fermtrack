@@ -36,11 +36,11 @@ def create_env_file():
     env_file = '.env'
     
     if os.path.exists(env_file):
-        print(f"✅ {env_file} already exists")
+        print(f"[OK] {env_file} already exists")
         return
     
     if not os.path.exists(env_example):
-        print(f"❌ {env_example} template not found")
+        print(f"[ERROR] {env_example} template not found")
         return
     
     # Read template
@@ -55,15 +55,15 @@ def create_env_file():
     with open(env_file, 'w') as f:
         f.write(content)
     
-    print(f"✅ Created {env_file} with secure random keys")
+    print(f"[OK] Created {env_file} with secure random keys")
 
 def check_python_version():
     """Check if Python version is compatible"""
     version = sys.version_info
     if version.major < 3 or (version.major == 3 and version.minor < 8):
-        print("❌ Python 3.8 or higher is required")
+        print("[ERROR] Python 3.8 or higher is required")
         return False
-    print(f"✅ Python {version.major}.{version.minor}.{version.micro} is compatible")
+    print(f"[OK] Python {version.major}.{version.minor}.{version.micro} is compatible")
     return True
 
 def create_virtual_environment():
@@ -71,15 +71,15 @@ def create_virtual_environment():
     venv_path = 'venv'
     
     if os.path.exists(venv_path):
-        print(f"✅ Virtual environment already exists at {venv_path}")
+        print(f"[OK] Virtual environment already exists at {venv_path}")
         return True
     
     try:
         subprocess.run([sys.executable, '-m', 'venv', venv_path], check=True)
-        print(f"✅ Created virtual environment at {venv_path}")
+        print(f"[OK] Created virtual environment at {venv_path}")
         return True
     except subprocess.CalledProcessError:
-        print(f"❌ Failed to create virtual environment")
+        print(f"[ERROR] Failed to create virtual environment")
         return False
 
 def install_dependencies():
@@ -87,15 +87,15 @@ def install_dependencies():
     venv_python = os.path.join('venv', 'bin', 'python') if os.name != 'nt' else os.path.join('venv', 'Scripts', 'python.exe')
     
     if not os.path.exists(venv_python):
-        print("❌ Virtual environment Python not found. Please activate venv manually.")
+        print("[ERROR] Virtual environment Python not found. Please activate venv manually.")
         return False
     
     try:
         subprocess.run([venv_python, '-m', 'pip', 'install', '-r', 'requirements.txt'], check=True)
-        print("✅ Dependencies installed successfully")
+        print("[OK] Dependencies installed successfully")
         return True
     except subprocess.CalledProcessError:
-        print("❌ Failed to install dependencies")
+        print("[ERROR] Failed to install dependencies")
         return False
 
 def initialize_database():
@@ -103,7 +103,7 @@ def initialize_database():
     venv_python = os.path.join('venv', 'bin', 'python') if os.name != 'nt' else os.path.join('venv', 'Scripts', 'python.exe')
     
     if not os.path.exists(venv_python):
-        print("❌ Virtual environment Python not found.")
+        print("[ERROR] Virtual environment Python not found.")
         return False
     
     try:
@@ -120,7 +120,7 @@ app = create_app()
 with app.app_context():
     # Create all tables
     db.create_all()
-    print("✅ Database tables created")
+    print("[OK] Database tables created")
     
     # Clean up old bakery entries
     old_demo = Bakery.query.filter_by(slug='demo').first()
@@ -138,14 +138,14 @@ with app.app_context():
                 if not existing:
                     assoc.bakery_id = demo1_bakery.id
         db.session.delete(old_demo)
-        print("✅ Removed old demo bakery")
+        print("[OK] Removed old demo bakery")
     
     old_haus = Bakery.query.filter_by(slug='haus').first()
     if old_haus:
         # Remove user associations
         UserBakery.query.filter_by(bakery_id=old_haus.id).delete()
         db.session.delete(old_haus)
-        print("✅ Removed Haus bakery")
+        print("[OK] Removed Haus bakery")
     
     db.session.commit()
     
@@ -160,9 +160,9 @@ with app.app_context():
         )
         db.session.add(default_bakery)
         db.session.flush()
-        print("✅ Created demo bakery 1")
+        print("[OK] Created demo bakery 1")
     else:
-        print("✅ Demo bakery 1 already exists")
+        print("[OK] Demo bakery 1 already exists")
     
     # Create second demo bakery for testing multi-tenancy
     demo2_bakery = Bakery.query.filter_by(slug='demo2').first()
@@ -175,9 +175,9 @@ with app.app_context():
         )
         db.session.add(demo2_bakery)
         db.session.flush()
-        print("✅ Created demo bakery 2")
+        print("[OK] Created demo bakery 2")
     else:
-        print("✅ Demo bakery 2 already exists")
+        print("[OK] Demo bakery 2 already exists")
     
     # Create default admin user
     admin_user = User.query.filter_by(username='admin').first()
@@ -197,7 +197,7 @@ with app.app_context():
             role='admin'
         )
         db.session.add(user_bakery)
-        print("✅ Created default admin user")
+        print("[OK] Created default admin user")
     else:
         # Ensure admin has access to demo bakery 1
         user_bakery = UserBakery.query.filter_by(
@@ -211,9 +211,9 @@ with app.app_context():
                 role='admin'
             )
             db.session.add(user_bakery)
-            print("✅ Added admin access to demo bakery 1")
+            print("[OK] Added admin access to demo bakery 1")
         else:
-            print("✅ Admin user already has access to demo bakery 1")
+            print("[OK] Admin user already has access to demo bakery 1")
     
     # Ensure admin has access to demo bakery 2
     demo2_user_bakery = UserBakery.query.filter_by(
@@ -227,18 +227,18 @@ with app.app_context():
             role='admin'
         )
         db.session.add(demo2_user_bakery)
-        print("✅ Added admin access to demo bakery 2")
+        print("[OK] Added admin access to demo bakery 2")
     else:
-        print("✅ Admin user already has access to demo bakery 2")
+        print("[OK] Admin user already has access to demo bakery 2")
     
     db.session.commit()
-    print("✅ Database initialization completed successfully")
+    print("[OK] Database initialization completed successfully")
     
 '''], check=True, capture_output=True, text=True, env=env)
-        print("✅ Database initialized with default data")
+        print("[OK] Database initialized with default data")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to initialize database: {e.stderr}")
+        print(f"[ERROR] Failed to initialize database: {e.stderr}")
         if e.stdout:
             print(f"Output: {e.stdout}")
         return False
@@ -248,7 +248,7 @@ def print_next_steps():
     activate_cmd = 'source venv/bin/activate' if os.name != 'nt' else 'venv\\Scripts\\activate'
     
     print("\n" + "="*60)
-    print("🎉 FermTrack Backend Setup Complete!")
+    print("[SUCCESS] FermTrack Backend Setup Complete!")
     print("="*60)
     print("\nNext steps:")
     print(f"1. Activate the virtual environment:")
@@ -261,7 +261,7 @@ def print_next_steps():
     print("\n4. Default admin credentials:")
     print("   Username: admin")
     print("   Password: admin123") 
-    print("   ⚠️  Change these in production!")
+    print("   [WARNING]  Change these in production!")
     print("\n5. Multi-tenant setup:")
     print("   - Demo bakery: demo.localhost:5000")
     print("   - Add custom hosts to /etc/hosts if needed")
@@ -275,7 +275,7 @@ def print_next_steps():
 
 def main():
     """Main initialization function"""
-    print("🚀 Initializing FermTrack Backend...")
+    print("[START] Initializing FermTrack Backend...")
     print()
     
     # Check Python version

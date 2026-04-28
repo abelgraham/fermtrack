@@ -24,13 +24,13 @@ import os
 
 def check_database_schema():
     """Check if credit system columns exist in the database"""
-    db_path = 'fermtrack.db'
+    db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
     
     if not os.path.exists(db_path):
-        print(f"❌ Database file {db_path} not found!")
+        print(f"[ERROR] Database file {db_path} not found!")
         return False
     
-    print(f"🔍 Checking database schema: {db_path}")
+    print(f"[CHECK] Checking database schema: {db_path}")
     
     try:
         conn = sqlite3.connect(db_path)
@@ -40,7 +40,7 @@ def check_database_schema():
         cursor.execute("PRAGMA table_info(bakeries)")
         columns = cursor.fetchall()
         
-        print("\n📋 Bakeries table columns:")
+        print("\n[LIST] Bakeries table columns:")
         credit_columns = []
         for col in columns:
             col_name = col[1]  # Column name is at index 1
@@ -50,29 +50,29 @@ def check_database_schema():
             if col_name.startswith('credit_'):
                 credit_columns.append(col_name)
         
-        print(f"\n🎯 Credit system columns found: {credit_columns}")
+        print(f"\n[RESULT] Credit system columns found: {credit_columns}")
         
         required_columns = ['credit_type', 'credit_limit', 'credit_used', 'credit_reset_date']
         missing_columns = [col for col in required_columns if col not in credit_columns]
         
         if missing_columns:
-            print(f"❌ Missing columns: {missing_columns}")
+            print(f"[ERROR] Missing columns: {missing_columns}")
             return False
         else:
-            print("✅ All required credit system columns exist!")
+            print("[OK] All required credit system columns exist!")
             
             # Test a simple query
             cursor.execute("SELECT id, name, credit_type, credit_limit, credit_used FROM bakeries")
             bakeries = cursor.fetchall()
             
-            print(f"\n📊 Bakery data ({len(bakeries)} records):")
+            print(f"\n[STATS] Bakery data ({len(bakeries)} records):")
             for bakery in bakeries:
                 print(f"   {bakery[1]}: {bakery[2]} ({bakery[4]}/{bakery[3]} credits used)")
             
             return True
             
     except Exception as e:
-        print(f"❌ Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
         return False
     finally:
         if conn:

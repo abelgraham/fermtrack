@@ -32,15 +32,15 @@ def test_credit_system():
     """Test the credit system functionality"""
     app = create_app()
     with app.app_context():
-        print("🧪 Testing Credit System Implementation")
+        print("[TEST] Testing Credit System Implementation")
         print("=" * 50)
         
         # Get all bakeries
         bakeries = Bakery.query.all()
-        print(f"📊 Total bakeries found: {len(bakeries)}")
+        print(f"[STATS] Total bakeries found: {len(bakeries)}")
         
         for bakery in bakeries:
-            print(f"\n🏪 Bakery: {bakery.name}")
+            print(f"\n[BAKERY] Bakery: {bakery.name}")
             print(f"   ID: {bakery.id}")
             print(f"   Verified: {bakery.is_verified}")
             print(f"   Credit Type: {bakery.credit_type}")
@@ -55,14 +55,14 @@ def test_credit_system():
                 print("   Next Reset: Not set")
         
         # Test credit consumption for limited accounts
-        print(f"\n🔬 Testing Credit Consumption")
+        print(f"\n[TEST] Testing Credit Consumption")
         print("-" * 30)
         
         # Find or create a test bakery with limited credits
         test_bakery = Bakery.query.filter_by(credit_type='limited').first()
         
         if not test_bakery:
-            print("📝 Creating test bakery with limited credits...")
+            print("[NOTE] Creating test bakery with limited credits...")
             test_bakery = bakeries[0] if bakeries else None
             if test_bakery:
                 test_bakery.credit_type = 'limited'
@@ -73,12 +73,12 @@ def test_credit_system():
                 next_month = test_bakery.credit_reset_date.replace(day=1)
                 test_bakery.credit_reset_date = next_month
                 db.session.commit()
-                print(f"✅ Test bakery configured: {test_bakery.name}")
+                print(f"[OK] Test bakery configured: {test_bakery.name}")
             else:
-                print("❌ No bakeries available for testing")
+                print("[ERROR] No bakeries available for testing")
                 return
         
-        print(f"\n🎯 Testing with bakery: {test_bakery.name}")
+        print(f"\n[RESULT] Testing with bakery: {test_bakery.name}")
         print(f"   Initial credits: {test_bakery.get_credit_remaining()}/{test_bakery.credit_limit}")
         
         # Test credit consumption
@@ -89,13 +89,13 @@ def test_credit_system():
             if can_create:
                 test_bakery.consume_credit()
                 db.session.commit()
-                print(f"     ✅ Credit consumed. Remaining: {test_bakery.get_credit_remaining()}")
+                print(f"     [OK] Credit consumed. Remaining: {test_bakery.get_credit_remaining()}")
             else:
-                print(f"     ❌ Credit limit reached!")
+                print(f"     [ERROR] Credit limit reached!")
                 break
         
         # Test monthly reset
-        print(f"\n📅 Testing Monthly Reset")
+        print(f"\n[DATE] Testing Monthly Reset")
         print("-" * 25)
         print(f"   Before reset - Used: {test_bakery.credit_used}, Remaining: {test_bakery.get_credit_remaining()}")
         
@@ -111,7 +111,7 @@ def test_credit_system():
         print(f"   After reset - Used: {test_bakery.credit_used}, Remaining: {test_bakery.get_credit_remaining()}")
         print(f"   New reset date: {test_bakery.credit_reset_date}")
         
-        print(f"\n✅ Credit system test completed!")
+        print(f"\n[OK] Credit system test completed!")
 
 if __name__ == '__main__':
     test_credit_system()
