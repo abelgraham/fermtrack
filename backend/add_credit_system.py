@@ -26,22 +26,9 @@ from datetime import datetime
 def add_credit_columns():
     """Add credit system columns to existing bakeries"""
     
-    # Find the database file
-    db_path = None
-    possible_paths = [
-        'fermtrack.db',
-        '../fermtrack.db',
-        '../instance/fermtrack.db',
-        'instance/fermtrack.db',
-        '/var/lib/fermtrack/fermtrack.db'
-    ]
-    
-    for path in possible_paths:
-        if os.path.exists(path):
-            db_path = path
-            break
-    
-    if not db_path:
+    db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
+
+    if not os.path.exists(db_path):
         print("❌ Could not find database file")
         return False
     

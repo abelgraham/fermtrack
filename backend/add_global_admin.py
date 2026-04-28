@@ -89,26 +89,18 @@ def create_global_admin(db_path):
 
 def main():
     """Main function to run migrations"""
-    # Database paths
-    db_paths = [
-        "/home/ag/fermtrack/backend/instance/fermtrack.db",
-        "/home/ag/fermtrack/backend/fermtrack.db", 
-        "/home/ag/fermtrack/instance/fermtrack.db"
-    ]
+    db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
     
     print("🔧 Migrating databases for global admin support...")
     
-    success_count = 0
-    for db_path in db_paths:
-        if os.path.exists(db_path):
-            print(f"\n📂 Processing: {db_path}")
-            if add_global_admin_column(db_path) and create_global_admin(db_path):
-                success_count += 1
-        else:
-            print(f"⚠️  Database not found: {db_path}")
+    if not os.path.exists(db_path):
+        print(f"⚠️  Database not found: {db_path}")
+        print("\n❌ Migration failed")
+        sys.exit(1)
     
-    if success_count > 0:
-        print(f"\n🎉 Migration completed successfully for {success_count} database(s)")
+    print(f"\n📂 Processing: {db_path}")
+    if add_global_admin_column(db_path) and create_global_admin(db_path):
+        print(f"\n🎉 Migration completed successfully")
         print("👤 Global admin login: admin / admin123")
         print("🔑 Global admins can login without specifying a bakery")
     else:
