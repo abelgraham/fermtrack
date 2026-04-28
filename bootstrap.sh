@@ -47,6 +47,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
 PIDFILE_DIR="$PROJECT_ROOT/.pids"
+BOOTSTRAP_HTTP_TEST_MODE="${FERMTRACK_ALLOW_INSECURE_HTTP:-1}"
 
 # Create PID directory if it doesn't exist
 mkdir -p "$PIDFILE_DIR"
@@ -101,6 +102,7 @@ is_running() {
 # Start backend server
 start_backend() {
     log_info "Starting FermTrack Backend API..."
+    log_info "Bootstrap HTTP test mode: FERMTRACK_ALLOW_INSECURE_HTTP=$BOOTSTRAP_HTTP_TEST_MODE"
     
     if is_running "backend"; then
         log_warn "Backend is already running (PID: $(get_pid 'backend'))"
@@ -122,7 +124,7 @@ start_backend() {
     
     # Start backend server in background
     log_info "Launching backend server on port $BACKEND_PORT..."
-    nohup python3 app.py > "$PIDFILE_DIR/backend.log" 2>&1 &
+    FERMTRACK_ALLOW_INSECURE_HTTP="$BOOTSTRAP_HTTP_TEST_MODE" FLASK_USE_RELOADER=0 nohup python3 app.py > "$PIDFILE_DIR/backend.log" 2>&1 &
     local pid=$!
     echo $pid > "$PIDFILE_DIR/backend.pid"
     
@@ -141,6 +143,7 @@ start_backend() {
 # Start frontend server
 start_frontend() {
     log_info "Starting FermTrack Frontend..."
+    log_info "Bootstrap HTTP test mode: FERMTRACK_ALLOW_INSECURE_HTTP=$BOOTSTRAP_HTTP_TEST_MODE"
     
     if is_running "frontend"; then
         log_warn "Frontend is already running (PID: $(get_pid 'frontend'))"

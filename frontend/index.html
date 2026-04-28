@@ -1522,8 +1522,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       }
     };
 
-    // HTTPS Redirect for production
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    const isProductionDomain = location.hostname === 'fermtrack.com' || location.hostname.endsWith('.fermtrack.com');
+
+    // Force HTTPS only for production domains so bootstrap can still run on EC2 test hosts over HTTP.
+    if (isProductionDomain && location.protocol !== 'https:') {
       console.log('Redirecting to HTTPS...');
       location.replace('https:' + window.location.href.substring(window.location.protocol.length));
     }

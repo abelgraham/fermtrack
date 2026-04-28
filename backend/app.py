@@ -28,6 +28,10 @@ from bakeries import bakeries_bp
 from middleware import TenantMiddleware
 import os
 
+
+def insecure_http_enabled():
+    return os.environ.get('FERMTRACK_ALLOW_INSECURE_HTTP', '').lower() in {'1', 'true', 'yes', 'on'}
+
 def create_app(config_name=None):
     """Application factory pattern"""
     if config_name is None:
@@ -44,7 +48,9 @@ def create_app(config_name=None):
     tenant_middleware = TenantMiddleware(app)
     
     # Configure CORS - Allow access from local network devices and production domains
-    cors_origins = ['*'] if os.environ.get('FLASK_ENV', 'development') == 'development' else [
+    cors_origins = ['*'] if (
+        os.environ.get('FLASK_ENV', 'development') == 'development' or insecure_http_enabled()
+    ) else [
         'http://localhost:3000', 'http://127.0.0.1:3000', 
         'http://localhost:8080', 'http://127.0.0.1:8080',
         'https://fermtrack.com', 'https://test.fermtrack.com',
@@ -131,4 +137,6 @@ def create_app(config_name=None):
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    debug_mode = os.environ.get('FLASK_ENV', 'development') == 'development'
+    use_reloader = os.environ.get('FLASK_USE_RELOADER', '1').lower() in {'1', 'true', 'yes', 'on'}
+    app.run(host='0.0.0.0', port=5000, debug=debug_mode, use_reloader=use_reloader)
