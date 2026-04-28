@@ -29,11 +29,11 @@ BASE_URL = 'http://localhost:5000/api'
 
 def test_credit_system_api():
     """Test the credit system through the actual API"""
-    print("🧪 Testing Credit System API Integration")
+    print("[TEST] Testing Credit System API Integration")
     print("=" * 50)
     
     # Test authentication first
-    print("🔐 Testing Authentication...")
+    print("[AUTH] Testing Authentication...")
     
     # Test login (using correct format with bakery)
     login_data = {
@@ -45,13 +45,13 @@ def test_credit_system_api():
     response = requests.post(f"{BASE_URL}/auth/login", json=login_data)
     
     if response.status_code != 200:
-        print(f"❌ Login failed: {response.status_code}")
+        print(f"[ERROR] Login failed: {response.status_code}")
         print(f"Response: {response.text}")
         return
     
     token = response.json().get('access_token')
     if not token:
-        print("❌ No access token received")
+        print("[ERROR] No access token received")
         return
     
     headers = {
@@ -59,20 +59,20 @@ def test_credit_system_api():
         'X-Bakery-Slug': 'demo1'  # Updated to use correct bakery
     }
     
-    print("✅ Authentication successful")
+    print("[OK] Authentication successful")
     
     # Test credit info endpoint
-    print("\n💳 Testing Credit Info Endpoint...")
+    print("\n[CREDIT] Testing Credit Info Endpoint...")
     
     response = requests.get(f"{BASE_URL}/batches/credits", headers=headers)
     
     if response.status_code != 200:
-        print(f"❌ Credit info failed: {response.status_code}")
+        print(f"[ERROR] Credit info failed: {response.status_code}")
         print(f"Response: {response.text}")
         return
     
     credit_info = response.json().get('credit_info', {})
-    print("✅ Credit info retrieved:")
+    print("[OK] Credit info retrieved:")
     print(f"   Credit Type: {credit_info.get('credit_type')}")
     print(f"   Credits Used: {credit_info.get('credit_used')}")
     print(f"   Credit Limit: {credit_info.get('credit_limit')}")
@@ -80,12 +80,12 @@ def test_credit_system_api():
     print(f"   Is Verified: {credit_info.get('is_verified')}")
     
     # Test batch listing with credit info
-    print("\n📋 Testing Batch List with Credit Info...")
+    print("\n[LIST] Testing Batch List with Credit Info...")
     
     response = requests.get(f"{BASE_URL}/batches", headers=headers)
     
     if response.status_code != 200:
-        print(f"❌ Batch listing failed: {response.status_code}")
+        print(f"[ERROR] Batch listing failed: {response.status_code}")
         print(f"Response: {response.text}")
         return
     
@@ -93,12 +93,12 @@ def test_credit_system_api():
     credit_info = batch_data.get('credit_info', {})
     batches = batch_data.get('batches', [])
     
-    print(f"✅ Batch listing successful:")
+    print(f"[OK] Batch listing successful:")
     print(f"   Total batches: {len(batches)}")
     print(f"   Credit info included: {bool(credit_info)}")
     
     # Test batch creation
-    print("\n🍞 Testing Batch Creation with Credit System...")
+    print("\n[BREAD] Testing Batch Creation with Credit System...")
     
     # Create a test batch
     batch_data = {
@@ -112,7 +112,7 @@ def test_credit_system_api():
     response = requests.post(f"{BASE_URL}/batches", json=batch_data, headers=headers)
     
     if response.status_code == 201:
-        print("✅ Batch creation successful:")
+        print("[OK] Batch creation successful:")
         result = response.json()
         batch_info = result.get('batch', {})
         credit_info = result.get('credit_info', {})
@@ -125,7 +125,7 @@ def test_credit_system_api():
         print(f"     Remaining: {credit_info.get('credit_remaining')}")
         
     elif response.status_code == 429:
-        print("✅ Credit limit protection working:")
+        print("[OK] Credit limit protection working:")
         result = response.json()
         print(f"   Error: {result.get('error')}")
         print(f"   Message: {result.get('message')}")
@@ -133,20 +133,20 @@ def test_credit_system_api():
         print(f"   Credits: {credit_info.get('credit_used')}/{credit_info.get('credit_limit')}")
         
     else:
-        print(f"❌ Batch creation failed: {response.status_code}")
+        print(f"[ERROR] Batch creation failed: {response.status_code}")
         print(f"Response: {response.text}")
         return
     
-    print("\n✅ Credit System API Test Completed Successfully!")
+    print("\n[OK] Credit System API Test Completed Successfully!")
 
 def test_credit_limits():
     """Test credit limit enforcement by trying to create multiple batches"""
-    print("\n🔬 Testing Credit Limit Enforcement")
+    print("\n[TEST] Testing Credit Limit Enforcement")
     print("=" * 40)
     
     # This test would require setting up a bakery with limited credits
     # and attempting to exceed the limit
-    print("ℹ️ Credit limit testing requires manual setup of limited bakery")
+    print("[INFO] Credit limit testing requires manual setup of limited bakery")
     print("   Set a bakery to 'limited' with low credit_limit for testing")
 
 if __name__ == '__main__':
@@ -154,7 +154,7 @@ if __name__ == '__main__':
         test_credit_system_api()
         test_credit_limits()
     except requests.exceptions.ConnectionError:
-        print("❌ Connection Error: Is the Flask server running?")
+        print("[ERROR] Connection Error: Is the Flask server running?")
         print("   Start the server with: python app.py")
     except Exception as e:
-        print(f"❌ Test failed with error: {e}")
+        print(f"[ERROR] Test failed with error: {e}")

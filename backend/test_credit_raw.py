@@ -28,10 +28,10 @@ def test_credit_system_raw():
     db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
     
     if not os.path.exists(db_path):
-        print(f"❌ Database file {db_path} not found!")
+        print(f"[ERROR] Database file {db_path} not found!")
         return
     
-    print("🧪 Testing Credit System (Raw SQL)")
+    print("[TEST] Testing Credit System (Raw SQL)")
     print("=" * 45)
     
     conn = sqlite3.connect(db_path)
@@ -45,11 +45,11 @@ def test_credit_system_raw():
         """)
         bakeries = cursor.fetchall()
         
-        print(f"📊 Found {len(bakeries)} bakeries:")
+        print(f"[STATS] Found {len(bakeries)} bakeries:")
         for bakery in bakeries:
             bakery_id, name, is_verified, credit_type, credit_limit, credit_used, reset_date = bakery
             remaining = credit_limit - credit_used if credit_type == 'limited' else 'unlimited'
-            print(f"   🏪 {name}")
+            print(f"   [BAKERY] {name}")
             print(f"      Verified: {bool(is_verified)}")
             print(f"      Credit Type: {credit_type}")
             print(f"      Credits: {credit_used}/{credit_limit} (remaining: {remaining})")
@@ -57,20 +57,20 @@ def test_credit_system_raw():
             print()
         
         # Test credit consumption logic
-        print("🧪 Testing Credit Consumption Logic")
+        print("[TEST] Testing Credit Consumption Logic")
         print("-" * 35)
         
         # Find a bakery to test with
         test_bakery = bakeries[0] if bakeries else None
         
         if not test_bakery:
-            print("❌ No bakeries found for testing")
+            print("[ERROR] No bakeries found for testing")
             return
         
         bakery_id, name, is_verified, credit_type, credit_limit, credit_used, reset_date = test_bakery
         
         # Set up test conditions - create limited bakery for testing
-        print(f"🎯 Setting up test with bakery: {name}")
+        print(f"[RESULT] Setting up test with bakery: {name}")
         
         # Temporarily set to limited for testing
         next_month = datetime.now().replace(day=1) + timedelta(days=32)
@@ -85,7 +85,7 @@ def test_credit_system_raw():
             WHERE id = ?
         """, (next_month.isoformat(), bakery_id))
         
-        print(f"   ✅ Set to limited: 3 credits per month")
+        print(f"   [OK] Set to limited: 3 credits per month")
         
         # Test credit consumption
         for i in range(5):  # Try to use more credits than available
@@ -114,15 +114,15 @@ def test_credit_system_raw():
                     WHERE id = ?
                 """, (bakery_id,))
                 conn.commit()
-                print(f"     ✅ Credit consumed!")
+                print(f"     [OK] Credit consumed!")
             elif not can_create:
-                print(f"     ❌ Credit limit reached!")
+                print(f"     [ERROR] Credit limit reached!")
                 break
             else:
-                print(f"     ✅ Unlimited credits - no consumption needed")
+                print(f"     [OK] Unlimited credits - no consumption needed")
         
         # Test monthly reset simulation
-        print(f"\n📅 Testing Monthly Reset")
+        print(f"\n[DATE] Testing Monthly Reset")
         print("-" * 25)
         
         # Get current state
@@ -175,11 +175,11 @@ def test_credit_system_raw():
         """, (bakery_id,))
         conn.commit()
         
-        print(f"\n✅ Credit system test completed successfully!")
-        print(f"   🔧 Bakery {name} restored to original state")
+        print(f"\n[OK] Credit system test completed successfully!")
+        print(f"   [INFO] Bakery {name} restored to original state")
         
     except Exception as e:
-        print(f"❌ Test failed: {e}")
+        print(f"[ERROR] Test failed: {e}")
         conn.rollback()
     finally:
         conn.close()

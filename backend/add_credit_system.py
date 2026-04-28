@@ -29,10 +29,10 @@ def add_credit_columns():
     db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
 
     if not os.path.exists(db_path):
-        print("❌ Could not find database file")
+        print("[ERROR] Could not find database file")
         return False
     
-    print(f"📁 Using database: {db_path}")
+    print(f"[FILE] Using database: {db_path}")
     
     try:
         conn = sqlite3.connect(db_path)
@@ -44,22 +44,22 @@ def add_credit_columns():
         
         # Add credit_type column if it doesn't exist
         if 'credit_type' not in columns:
-            print("➕ Adding credit_type column...")
+            print("[ADD] Adding credit_type column...")
             cursor.execute("ALTER TABLE bakeries ADD COLUMN credit_type TEXT DEFAULT 'limited'")
         
         # Add credit_limit column if it doesn't exist  
         if 'credit_limit' not in columns:
-            print("➕ Adding credit_limit column...")
+            print("[ADD] Adding credit_limit column...")
             cursor.execute("ALTER TABLE bakeries ADD COLUMN credit_limit INTEGER DEFAULT 10")
         
         # Add credit_used column if it doesn't exist
         if 'credit_used' not in columns:
-            print("➕ Adding credit_used column...")
+            print("[ADD] Adding credit_used column...")
             cursor.execute("ALTER TABLE bakeries ADD COLUMN credit_used INTEGER DEFAULT 0")
         
         # Add credit_reset_date column if it doesn't exist
         if 'credit_reset_date' not in columns:
-            print("➕ Adding credit_reset_date column...")
+            print("[ADD] Adding credit_reset_date column...")
             cursor.execute("ALTER TABLE bakeries ADD COLUMN credit_reset_date DATETIME")
             
             # Set initial reset date to first day of next month for all bakeries
@@ -70,7 +70,7 @@ def add_credit_columns():
             """)
         
         # Set default values for existing bakeries
-        print("🔧 Setting default credit values for existing bakeries...")
+        print("[INFO] Setting default credit values for existing bakeries...")
         
         # Verified bakeries get unlimited credits by default
         cursor.execute("""
@@ -105,30 +105,30 @@ def add_credit_columns():
         cursor.execute("SELECT COUNT(*) FROM bakeries WHERE credit_type = 'limited'")
         limited_bakeries = cursor.fetchone()[0]
         
-        print(f"✅ Migration completed successfully!")
-        print(f"   📊 Total bakeries: {total_bakeries}")
-        print(f"   🔓 Unlimited credit accounts: {unlimited_bakeries}")
-        print(f"   📏 Limited credit accounts: {limited_bakeries}")
+        print(f"[OK] Migration completed successfully!")
+        print(f"   [STATS] Total bakeries: {total_bakeries}")
+        print(f"   [UNLOCKED] Unlimited credit accounts: {unlimited_bakeries}")
+        print(f"   [LIMITED] Limited credit accounts: {limited_bakeries}")
         
         conn.close()
         return True
         
     except Exception as e:
-        print(f"❌ Error during migration: {e}")
+        print(f"[ERROR] Error during migration: {e}")
         return False
 
 if __name__ == "__main__":
-    print("🚀 Starting credit system migration...")
+    print("[START] Starting credit system migration...")
     success = add_credit_columns()
     
     if success:
-        print("\n🎉 Credit system migration completed successfully!")
-        print("📝 Summary:")
-        print("   • Added credit_type column (limited/unlimited)")
-        print("   • Added credit_limit column (monthly limit)")
-        print("   • Added credit_used column (current usage)")
-        print("   • Added credit_reset_date column (monthly reset)")
-        print("   • Verified bakeries → unlimited credits")
-        print("   • Unverified bakeries → limited credits (10/month)")
+        print("\n[SUCCESS] Credit system migration completed successfully!")
+        print("[NOTE] Summary:")
+        print("   - Added credit_type column (limited/unlimited)")
+        print("   - Added credit_limit column (monthly limit)")
+        print("   - Added credit_used column (current usage)")
+        print("   - Added credit_reset_date column (monthly reset)")
+        print("   - Verified bakeries -> unlimited credits")
+        print("   - Unverified bakeries -> limited credits (10/month)")
     else:
-        print("\n💥 Migration failed! Check the error messages above.")
+        print("\n[FAILED] Migration failed! Check the error messages above.")

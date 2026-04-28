@@ -39,14 +39,14 @@ def add_global_admin_column(db_path):
             print(f"Adding is_global_admin column to {db_path}...")
             cursor.execute("ALTER TABLE users ADD COLUMN is_global_admin BOOLEAN DEFAULT 0;")
             conn.commit()
-            print("✅ Added is_global_admin column")
+            print("[OK] Added is_global_admin column")
         else:
-            print(f"✅ is_global_admin column already exists in {db_path}")
+            print(f"[OK] is_global_admin column already exists in {db_path}")
         
         conn.close()
         
     except Exception as e:
-        print(f"❌ Error updating {db_path}: {e}")
+        print(f"[ERROR] Error updating {db_path}: {e}")
         return False
     
     return True
@@ -79,10 +79,10 @@ def create_global_admin(db_path):
         
         conn.commit()
         conn.close()
-        print("✅ Global admin user configured")
+        print("[OK] Global admin user configured")
         
     except Exception as e:
-        print(f"❌ Error creating global admin in {db_path}: {e}")
+        print(f"[ERROR] Error creating global admin in {db_path}: {e}")
         return False
     
     return True
@@ -91,20 +91,20 @@ def main():
     """Main function to run migrations"""
     db_path = os.path.join(os.path.dirname(__file__), 'instance', 'fermtrack.db')
     
-    print("🔧 Migrating databases for global admin support...")
+    print("[INFO] Migrating databases for global admin support...")
     
     if not os.path.exists(db_path):
-        print(f"⚠️  Database not found: {db_path}")
-        print("\n❌ Migration failed")
+        print(f"[WARNING]  Database not found: {db_path}")
+        print("\n[ERROR] Migration failed")
         sys.exit(1)
     
-    print(f"\n📂 Processing: {db_path}")
+    print(f"\n[DIR] Processing: {db_path}")
     if add_global_admin_column(db_path) and create_global_admin(db_path):
-        print(f"\n🎉 Migration completed successfully")
-        print("👤 Global admin login: admin / admin123")
-        print("🔑 Global admins can login without specifying a bakery")
+        print(f"\n[SUCCESS] Migration completed successfully")
+        print("[USER] Global admin login: admin / admin123")
+        print("[KEY] Global admins can login without specifying a bakery")
     else:
-        print("\n❌ Migration failed")
+        print("\n[ERROR] Migration failed")
         sys.exit(1)
 
 if __name__ == "__main__":
