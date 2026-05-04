@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=ec2-user
-WorkingDirectory=/home/ec2-user/fermtrack/backend
-Environment=PYTHONPATH=/home/ec2-user/fermtrack/backend
-ExecStart=/usr/bin/python3 /home/ec2-user/fermtrack/backend/app.py
+User=DEPLOY_USER
+WorkingDirectory=/home/DEPLOY_USER/fermtrack/backend
+Environment=PYTHONPATH=/home/DEPLOY_USER/fermtrack/backend
+ExecStart=/usr/bin/python3 /home/DEPLOY_USER/fermtrack/backend/app.py
 Restart=always
 RestartSec=3
 
