@@ -4,7 +4,8 @@
 echo "🚀 Setting up FermTrack on EC2..."
 
 # Change to fermtrack directory
-cd /home/ec2-user/fermtrack
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
 # Run database migrations
 echo "📂 Running database migrations..."
@@ -13,10 +14,11 @@ python3 add_verification_columns.py
 python3 add_applications_table.py  
 python3 add_global_admin.py
 
-# Copy service files
-echo "⚙️  Setting up systemd services..."
-sudo cp fermtrack-backend.service /etc/systemd/system/
-sudo cp fermtrack-frontend.service /etc/systemd/system/
+# Copy service files (substitute current user into service files)
+DEPLOY_USER="$(whoami)"
+echo "⚙️  Setting up systemd services (user: $DEPLOY_USER)..."
+sed "s/DEPLOY_USER/$DEPLOY_USER/g" "$SCRIPT_DIR/fermtrack-backend.service" | sudo tee /etc/systemd/system/fermtrack-backend.service > /dev/null
+sed "s/DEPLOY_USER/$DEPLOY_USER/g" "$SCRIPT_DIR/fermtrack-frontend.service" | sudo tee /etc/systemd/system/fermtrack-frontend.service > /dev/null
 
 # Enable and start services
 sudo systemctl daemon-reload
