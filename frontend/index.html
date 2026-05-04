@@ -1396,15 +1396,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       
       // Auto-detect based on current host
       const currentHost = window.location.hostname;
-      const protocol = window.location.protocol;
       
       // If accessing via localhost, use localhost for backend too
       if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
         return 'http://localhost:5000/api';
       }
       
-      // For other hosts (IP addresses, domain names), use same host with port 5000
-      return `${protocol}//${currentHost}:5000/api`;
+      // For non-local hosts, go through same-origin nginx reverse proxy
+      return '/api';
     };
     
     const API_BASE = getBackendUrl();
