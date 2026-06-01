@@ -98,6 +98,38 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
       background: rgba(214, 178, 94, 0.08);
     }
 
+    .commercial-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border: 1px solid #e3c16f;
+      border-radius: 8px;
+      color: #121212;
+      background: linear-gradient(180deg, #f1d58a 0%, #d6b25e 100%);
+      box-shadow: 0 0 0 1px rgba(214, 178, 94, 0.2), 0 3px 10px rgba(214, 178, 94, 0.22);
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: 0.2s ease;
+    }
+
+    .top-links a.commercial-btn,
+    .top-links a.commercial-btn i {
+      color: #121212;
+    }
+
+    .commercial-btn:hover {
+      border-color: #f1d58a;
+      background: linear-gradient(180deg, #f8de98 0%, #e0bf71 100%);
+      box-shadow: 0 0 0 1px rgba(241, 213, 138, 0.28), 0 5px 14px rgba(214, 178, 94, 0.28);
+      transform: translateY(-1px);
+    }
+
+    .top-links a.commercial-btn:hover,
+    .top-links a.commercial-btn:hover i {
+      color: #121212;
+    }
+
     /* Hero */
     .hero {
       padding: 80px 0 64px;
@@ -375,6 +407,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
         <a href="#vision">Vision</a>
         <a class="github-btn" href="https://github.com/abelgraham/fermtrack" target="_blank" rel="noopener noreferrer">
           <i class="fab fa-github"></i> View on GitHub
+        </a>
+        <a class="commercial-btn" href="commercial-use.html">
+          <i class="fas fa-scale-balanced"></i> Commercial Use
         </a>
       </div>
     </div>

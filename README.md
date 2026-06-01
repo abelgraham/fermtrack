@@ -104,4 +104,10 @@ FermTrack is free software licensed under the [GNU Affero General Public License
 
 Complete source code: **https://github.com/abelgraham/fermtrack**
 
-All dependencies are AGPL-3.0 compatible (Flask, SQLAlchemy, etc. are MIT/BSD; Arduino libraries are LGPL/MIT). See [NOTICE](NOTICE) for details.
+All dependencies are AGPL-3.0 compatible (Flask, SQLAlchemy, etc. are MIT/BSD; Arduino libraries are LGPL/MIT). See [NOTICE](https://raw.githubusercontent.com/abelgraham/fermtrack/master/NOTICE) for details.
+
+Commercial options are also available:
+- Paid commercial self-host license (for organizations that want proprietary contract terms)
+- Managed hosting service (we run FermTrack for you)
+
+See [Commercial Use](commercial-use.html) for an overview and example pricing.
